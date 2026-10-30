@@ -69,6 +69,7 @@ import { syncLocaleWithObsidian } from './i18n/obsidianLocale';
 import { OPENCODE_PLAN_MODE_ID, OPENCODE_SAFE_MODE_ID } from './providers/opencode/modes';
 import { CODIAN_RIBBON_ICON_ID, CODIAN_RIBBON_ICON_SVG } from './shared/codianLogo';
 import { buildCursorContext } from './utils/editor';
+import { CODIAN_HOVER_LINK_SOURCE } from './utils/fileLink';
 import { resolveLoginShellPath } from './utils/loginShellPath';
 import { revealWorkspaceLeaf } from './utils/obsidianCompat';
 import { getVaultPath } from './utils/path';
@@ -151,6 +152,12 @@ export default class CodianPlugin extends Plugin {
         () => this.loadSettings({ deferNonRestoredSessionMetadata: true }),
       );
       // Provider workspace services are initialized lazily on first use.
+
+      // Let the Page preview core plugin handle hovering over links in messages.
+      this.registerHoverLinkSource(CODIAN_HOVER_LINK_SOURCE, {
+        display: 'Codian',
+        defaultMod: false,
+      });
 
       this.registerView(
         VIEW_TYPE_CODIAN,

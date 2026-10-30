@@ -5,9 +5,15 @@
  * them clickable to open the file in Obsidian.
  */
 
-import type { App, Component } from 'obsidian';
+import type { App, Component, HoverParent } from 'obsidian';
 
 import { getVaultFileByPath } from './obsidianCompat';
+
+/**
+ * Source id registered with Obsidian's Page preview core plugin.
+ * Links emitted under this id get the same hover preview as native links.
+ */
+export const CODIAN_HOVER_LINK_SOURCE = 'codian';
 
 /**
  * Regex pattern to match Obsidian wikilinks in text content.
@@ -141,7 +147,19 @@ function repairEmptyInternalLink(app: App, link: HTMLAnchorElement): void {
 }
 
 /**
- * Registers a delegated click handler for file links on a container.
+ * The Page preview plugin reads and writes `hoverPopover` on its hover parent,
+ * so the container needs that slot before it can act as one.
+ */
+function asHoverParent(element: HTMLElement): HoverParent {
+  const parent = element as HTMLElement & HoverParent;
+  if (parent.hoverPopover === undefined) {
+    parent.hoverPopover = null;
+  }
+  return parent;
+}
+
+/**
+ * Registers delegated click and hover handlers for file links on a container.
  * Should be called once on the messages container.
  * Handles both our custom .codian-file-link and Obsidian's .internal-link.
  */
@@ -162,6 +180,31 @@ export function registerFileLinkHandler(
         void app.workspace.openLinkText(linkTarget, '', 'tab');
       }
     }
+  });
+
+  // Links built by our renderer are plain anchors, so they never emit the
+  // 'hover-link' event that Obsidian's own MarkdownRenderer wires up. Forward
+  // the hover to the Page preview core plugin so these links get a preview too.
+  component.registerDomEvent(container, 'mouseover', (event: MouseEvent) => {
+    const link = (event.target as HTMLElement | null)?.closest(
+      'a.codian-file-link'
+    ) as HTMLAnchorElement | null;
+    if (!link) return;
+
+    // Moving between the link's own children re-fires mouseover; keep one per entry.
+    const related = event.relatedTarget as Node | null;
+    if (related && link.contains(related)) return;
+
+    const linkTarget = link.dataset.href || link.getAttribute('href');
+    if (!linkTarget) return;
+
+    app.workspace.trigger('hover-link', {
+      event,
+      source: CODIAN_HOVER_LINK_SOURCE,
+      hoverParent: asHoverParent(container),
+      targetEl: link,
+      linktext: linkTarget,
+    });
   });
 }
 
