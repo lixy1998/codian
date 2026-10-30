@@ -1,7 +1,11 @@
 import { parseYaml, stringifyYaml } from 'obsidian';
 
 import type { AgentSkillInput } from './AgentSkill';
-import { AgentSkillValidationError, validateAgentSkillInput } from './validateAgentSkill';
+import {
+  AgentSkillValidationError,
+  type AgentSkillValidationOptions,
+  validateAgentSkillInput,
+} from './validateAgentSkill';
 
 const FRONTMATTER_PATTERN = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n)?([\s\S]*)$/;
 
@@ -10,6 +14,15 @@ export interface ParsedAgentSkill {
   description: string;
   instructions: string;
   frontmatter: Record<string, unknown>;
+}
+
+export interface AgentSkillCodecOptions extends AgentSkillValidationOptions {
+  /**
+   * The containing folder is the identity of an existing package. Third-party installers
+   * routinely leave a stale or differently-cased `name` in the frontmatter; refusing to read
+   * those hides skills that work fine. Creating a package still requires an exact match.
+   */
+  allowDirectoryNameMismatch?: boolean;
 }
 
 export class AgentSkillCodecError extends Error {
@@ -36,7 +49,11 @@ function parseFrontmatter(source: string): Record<string, unknown> {
   return parsed;
 }
 
-export function parseAgentSkillMarkdown(content: string, directoryName: string): ParsedAgentSkill {
+export function parseAgentSkillMarkdown(
+  content: string,
+  directoryName: string,
+  options: AgentSkillCodecOptions = {},
+): ParsedAgentSkill {
   const match = content.match(FRONTMATTER_PATTERN);
   if (!match) {
     throw new AgentSkillCodecError('SKILL.md must start with YAML frontmatter');
@@ -49,18 +66,20 @@ export function parseAgentSkillMarkdown(content: string, directoryName: string):
   if (typeof frontmatter.description !== 'string') {
     throw new AgentSkillCodecError('SKILL.md frontmatter requires a string description');
   }
-  if (frontmatter.name !== directoryName) {
+  if (frontmatter.name !== directoryName && !options.allowDirectoryNameMismatch) {
     throw new AgentSkillCodecError('SKILL.md name must match its containing directory');
   }
 
   const parsed: ParsedAgentSkill = {
-    name: frontmatter.name,
+    // When the frontmatter name is stale, the folder wins: every later read/write is keyed by
+    // the folder path, so adopting its name keeps the package addressable.
+    name: options.allowDirectoryNameMismatch ? directoryName : frontmatter.name,
     description: frontmatter.description.trim(),
     instructions: match[2].replace(/\r\n/g, '\n').trim(),
     frontmatter,
   };
   try {
-    validateAgentSkillInput(parsed);
+    validateAgentSkillInput(parsed, options);
   } catch (error) {
     if (error instanceof AgentSkillValidationError) {
       throw new AgentSkillCodecError(error.message, { cause: error });

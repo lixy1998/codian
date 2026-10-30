@@ -16,6 +16,19 @@ describe('validateAgentSkill', () => {
     expect(validateAgentSkillName(name)).not.toBeNull();
   });
 
+  it('accepts non-ASCII names when portable naming is not required', () => {
+    for (const name of ['技能去痕', 'Obsidian历史题库搭建与组卷', '史料研读助手']) {
+      expect(validateAgentSkillName(name)).not.toBeNull();
+      expect(validateAgentSkillName(name, { requirePortableName: false })).toBeNull();
+    }
+  });
+
+  it('still rejects names that cannot be a folder name in permissive mode', () => {
+    for (const name of ['', ' padded ', 'a/b', 'a\\b', 'a'.repeat(65)]) {
+      expect(validateAgentSkillName(name, { requirePortableName: false })).not.toBeNull();
+    }
+  });
+
   it('requires a non-empty description no longer than 1024 characters', () => {
     expect(() => validateAgentSkillInput({
       name: 'portable-skill',

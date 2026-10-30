@@ -162,8 +162,12 @@ export class AgentSkillRepository {
     expectedRevision: string,
     input: AgentSkillInput,
   ): Promise<AgentSkillDocument> {
-    this.assertValidName(previousName);
-    validateAgentSkillInput(input);
+    this.assertReadableName(previousName);
+    // Editing an existing package may keep a non-ASCII name, but renaming it to a new name
+    // still has to produce something portable.
+    validateAgentSkillInput(input, {
+      requirePortableName: input.name !== previousName,
+    });
     return this.withMutation(async () => {
       const current = await this.readDocumentWithRaw(previousName);
       if (current.skill.revision !== expectedRevision) {
@@ -221,7 +225,7 @@ export class AgentSkillRepository {
   }
 
   async trash(name: string, expectedRevision: string): Promise<void> {
-    this.assertValidName(name);
+    this.assertReadableName(name);
     await this.withMutation(async () => {
       const current = await this.readDocument(name);
       if (current.revision !== expectedRevision) {
@@ -238,6 +242,16 @@ export class AgentSkillRepository {
     if (error) throw new AgentSkillValidationError('name', error);
   }
 
+  /**
+   * Reading an existing package is more permissive than creating one: folder names authored
+   * elsewhere may be non-ASCII (for example Chinese). Only path-shape problems are rejected,
+   * so such packages stay visible and editable instead of silently disappearing.
+   */
+  private assertReadableName(name: string): void {
+    const error = validateAgentSkillName(name, { requirePortableName: false });
+    if (error) throw new AgentSkillValidationError('name', error);
+  }
+
   private async readDocument(name: string): Promise<AgentSkillDocument> {
     return (await this.readDocumentWithRaw(name)).skill;
   }
@@ -246,7 +260,7 @@ export class AgentSkillRepository {
     skill: AgentSkillDocument;
     raw: string;
   }> {
-    this.assertValidName(name);
+    this.assertReadableName(name);
     const directoryPath = packagePath(name);
     const filePath = skillFilePath(name);
     await this.files.verifyManagedPath(directoryPath, { expectedType: 'folder' });
@@ -258,7 +272,10 @@ export class AgentSkillRepository {
   private documentFromRaw(name: string, raw: string): AgentSkillDocument {
     let parsed;
     try {
-      parsed = parseAgentSkillMarkdown(raw, name);
+      parsed = parseAgentSkillMarkdown(raw, name, {
+        allowDirectoryNameMismatch: true,
+        requirePortableName: false,
+      });
     } catch (error) {
       if (error instanceof AgentSkillCodecError) throw error;
       throw new AgentSkillCodecError('Could not parse SKILL.md', { cause: error });

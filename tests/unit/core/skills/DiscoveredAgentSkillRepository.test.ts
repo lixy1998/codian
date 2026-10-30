@@ -33,4 +33,41 @@ describe('DiscoveredAgentSkillRepository', () => {
       })],
     });
   });
+
+  it('lists a skill whose folder name is not ASCII-portable', async () => {
+    const repository = new DiscoveredAgentSkillRepository({
+      listFolders: jest.fn().mockResolvedValue(['.agents/skills/技能去痕']),
+      read: jest.fn().mockResolvedValue(markdown('技能去痕')),
+    });
+
+    const result = await repository.list();
+
+    expect(result.diagnostics).toEqual([]);
+    expect(result.skills).toEqual([
+      expect.objectContaining({
+        name: '技能去痕',
+        directoryPath: '.agents/skills/技能去痕',
+        filePath: '.agents/skills/技能去痕/SKILL.md',
+      }),
+    ]);
+  });
+
+  it('adopts the folder name when the frontmatter name is stale', async () => {
+    const repository = new DiscoveredAgentSkillRepository({
+      listFolders: jest.fn().mockResolvedValue(['.agents/skills/技能去痕']),
+      read: jest.fn().mockResolvedValue(markdown('另一个名字')),
+    });
+
+    const result = await repository.list();
+
+    // The folder is the package identity; a mismatch left behind by an installer must not
+    // hide an otherwise usable skill.
+    expect(result.diagnostics).toEqual([]);
+    expect(result.skills).toEqual([
+      expect.objectContaining({
+        name: '技能去痕',
+        directoryPath: '.agents/skills/技能去痕',
+      }),
+    ]);
+  });
 });

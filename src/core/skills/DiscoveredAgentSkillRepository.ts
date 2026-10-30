@@ -31,7 +31,13 @@ export class DiscoveredAgentSkillRepository {
       const filePath = `${folder}/SKILL.md`;
       try {
         const raw = await this.files.read(filePath);
-        const parsed = parseAgentSkillMarkdown(raw, name);
+        // Discovery must not reject packages that already exist just because their folder
+        // name is not ASCII-portable, or because an installer left a stale `name` behind.
+        // Those rules only apply when creating a package.
+        const parsed = parseAgentSkillMarkdown(raw, name, {
+          allowDirectoryNameMismatch: true,
+          requirePortableName: false,
+        });
         skills.push({
           ...parsed,
           directoryPath: folder,
