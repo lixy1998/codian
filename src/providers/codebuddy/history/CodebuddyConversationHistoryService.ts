@@ -6,7 +6,7 @@ import type {
   ProviderConversationHistoryService,
   ProviderHistoryPathContext,
 } from '../../../core/providers/types';
-import type { ChatMessage, Conversation } from '../../../core/types';
+import type { ChatMessage, Conversation, ToolCallInfo } from '../../../core/types';
 
 /**
  * CodeBuddy keeps the transcript next to the CLI, one JSONL per session:
@@ -45,9 +45,53 @@ function messageText(content: unknown): string {
   return content.map(blockText).filter(Boolean).join('\n');
 }
 
-/** Keeps only conversational turns; reasoning, tool calls and titles are noise here. */
+function parseArguments(raw: unknown): Record<string, unknown> {
+  if (typeof raw !== 'string') return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed !== null
+      ? (parsed as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function outputText(output: unknown): string {
+  if (typeof output === 'string') return output;
+  if (typeof output === 'object' && output !== null) {
+    const text = (output as { text?: unknown }).text;
+    if (typeof text === 'string') return text;
+    try {
+      return JSON.stringify(output);
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
+/**
+ * Keeps conversational turns plus the tool calls that ran inside them. Reasoning and generated
+ * titles are dropped — they add bulk without helping to recognise a conversation — but dropping
+ * tool calls hides what the assistant actually did, leaving replies that mention work ("patch
+ * applied", "pushed") with no visible steps behind them.
+ */
 function parseTranscript(raw: string): ChatMessage[] {
   const messages: ChatMessage[] = [];
+  const toolCallsByCallId = new Map<string, ToolCallInfo>();
+
+  const startAssistant = (timestamp: number): ChatMessage => {
+    const message: ChatMessage = {
+      id: `codebuddy-history-${messages.length}`,
+      role: 'assistant',
+      content: '',
+      timestamp,
+    };
+    messages.push(message);
+    return message;
+  };
+
   for (const line of raw.split('\n')) {
     if (!line.trim()) continue;
     let record: unknown;
@@ -63,18 +107,55 @@ function parseTranscript(raw: string): ChatMessage[] {
       type?: unknown;
       timestamp?: unknown;
       content?: unknown;
+      arguments?: unknown;
+      callId?: unknown;
+      name?: unknown;
+      output?: unknown;
+      status?: unknown;
     };
-    if (entry.type !== 'message' || typeof entry.role !== 'string') continue;
-    const text = messageText(entry.content);
-    if (!text.trim()) continue;
-    messages.push({
-      id: typeof entry.id === 'string' ? entry.id : `codebuddy-history-${messages.length}`,
-      role: entry.role === 'user' ? 'user' : 'assistant',
-      content: text,
-      timestamp: typeof entry.timestamp === 'number' ? entry.timestamp : Date.now(),
-    });
+    const timestamp = typeof entry.timestamp === 'number' ? entry.timestamp : Date.now();
+
+    if (entry.type === 'message' && typeof entry.role === 'string') {
+      const text = messageText(entry.content);
+      if (!text.trim()) continue;
+      messages.push({
+        id: typeof entry.id === 'string' ? entry.id : `codebuddy-history-${messages.length}`,
+        role: entry.role === 'user' ? 'user' : 'assistant',
+        content: text,
+        timestamp,
+      });
+      continue;
+    }
+
+    if (entry.type === 'function_call') {
+      const owner = messages[messages.length - 1];
+      const target = owner?.role === 'assistant' ? owner : startAssistant(timestamp);
+      const callId = typeof entry.callId === 'string'
+        ? entry.callId
+        : (typeof entry.id === 'string' ? entry.id : `call-${toolCallsByCallId.size}`);
+      const info: ToolCallInfo = {
+        id: callId,
+        name: typeof entry.name === 'string' ? entry.name : 'tool',
+        input: parseArguments(entry.arguments),
+        status: 'completed',
+      };
+      target.toolCalls = [...(target.toolCalls ?? []), info];
+      toolCallsByCallId.set(callId, info);
+      continue;
+    }
+
+    if (entry.type === 'function_call_result') {
+      const callId = typeof entry.callId === 'string' ? entry.callId : '';
+      const info = toolCallsByCallId.get(callId);
+      if (!info) continue;
+      info.result = outputText(entry.output);
+      info.status = entry.status === 'error' || entry.status === 'failed' ? 'error' : 'completed';
+    }
   }
-  return messages;
+
+  return messages.filter(message => (
+    message.content.trim().length > 0 || (message.toolCalls?.length ?? 0) > 0
+  ));
 }
 
 export class CodebuddyConversationHistoryService implements ProviderConversationHistoryService {

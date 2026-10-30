@@ -4,6 +4,14 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.5 — 2026-10-30
+
+- **Hydrate tool calls, not just text.** 1.7.4 restored the conversational turns but dropped
+  `function_call` / `function_call_result` records, so a transcript that used 71 tools showed
+  replies like "patch applied" and "pushed" with no visible steps behind them. Tool calls are now
+  paired by `callId`, attached to the assistant turn that issued them, and carry their output and
+  status. One restored conversation went from 8 messages / 0 tools to 12 messages / 71 tools.
+
 ## 1.7.4 — 2026-10-30
 
 - **Fix: conversations open empty after a restart.** CodeBuddy was registered without a
