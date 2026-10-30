@@ -4,6 +4,22 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.4 — 2026-10-30
+
+- **Fix: conversations open empty after a restart.** CodeBuddy was registered without a
+  `conversationHistoryService`. Every other provider ships one, and Codian stores only metadata —
+  the transcript belongs to the CLI. Without the service, `hydrateConversationHistory` had nothing
+  to call, so a restored conversation rendered as an empty welcome screen and clicking it in the
+  history list appeared to do nothing.
+  - The new service reads `~/.codebuddy/projects/<slug>/<sessionId>.jsonl`. It locates the file by
+    session id across project folders rather than recomputing the cwd slug, whose rules are easy to
+    get wrong (`d:\Documents\TNote` → `d-Documents-TNote`).
+  - Only conversational turns are hydrated; reasoning, tool calls and generated titles are skipped.
+- **Fix: `sessionId` was overwritten with null.** `NativeAcpChatRuntime.buildSessionUpdates`
+  wrote `this.sessionId` directly, which is null until the CLI has loaded a session. Any save
+  before that point persisted null over the stored id, permanently detaching the conversation from
+  its provider transcript. It now falls back to the persisted id, matching the other providers.
+
 ## 1.7.3 — 2026-10-30
 
 - **Fix history rows that looked unresponsive**: the click handler was bound to

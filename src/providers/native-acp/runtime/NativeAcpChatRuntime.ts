@@ -303,7 +303,12 @@ export class NativeAcpChatRuntime implements ChatRuntime {
   }): SessionUpdateResult {
     return {
       updates: {
-        sessionId: params.sessionInvalidated ? null : this.sessionId,
+        // Fall back to the persisted id when the runtime has not loaded a session yet. Writing
+        // `this.sessionId` directly persisted null for every conversation touched before the CLI
+        // started, detaching it from its provider transcript for good.
+        sessionId: params.sessionInvalidated
+          ? null
+          : (this.sessionId ?? params.conversation?.sessionId ?? null),
       },
     };
   }

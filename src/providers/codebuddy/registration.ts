@@ -2,6 +2,7 @@ import { createNativeAcpProviderModule } from '../native-acp/createNativeAcpProv
 import { codebuddyWorkspaceRegistration } from './app/CodebuddyWorkspaceServices';
 import { CODEBUDDY_PROVIDER_CAPABILITIES } from './capabilities';
 import { prepareCodebuddyEnvironment } from './env/prepareCodebuddyEnvironment';
+import { CodebuddyConversationHistoryService } from './history/CodebuddyConversationHistoryService';
 import { CodebuddySessionAdapter } from './runtime/CodebuddySessionAdapter';
 import { codebuddyChatUIConfig } from './ui/CodebuddyChatUIConfig';
 
@@ -31,5 +32,8 @@ const nativeCodebuddyProviderRegistration = createNativeAcpProviderModule({
 
 export const codebuddyProviderRegistration = {
   ...nativeCodebuddyProviderRegistration,
+  // Codian stores only metadata; without this the provider transcript is never read back and a
+  // restored conversation opens empty. Every other provider registers one. — CodeBuddy included.
+  historyService: new CodebuddyConversationHistoryService(),
   workspace: codebuddyWorkspaceRegistration,
 };
