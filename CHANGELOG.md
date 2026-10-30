@@ -4,6 +4,13 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.2 — 2026-10-30
+
+- **Fix `HierarchyRequestError` when selecting chat text**: the selection toolbar was created with
+  `ownerDocument.createDiv`, which attaches the element straight to the document — a document only
+  tolerates one element, so selecting text twice threw `Only one element on document allowed` and the
+  toolbar silently failed to appear. It is now built detached and appended to the body once.
+
 ## 1.7.1 — 2026-10-30
 
 - **New provider: CodeBuddy** (`codebuddy`), driven over ACP:

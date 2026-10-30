@@ -64,7 +64,9 @@ export class ChatSelectionController {
     this.hideToolbar();
     const rect = range.getBoundingClientRect();
     if (!rect.width && !rect.height) return;
-    const toolbar = this.messagesEl.ownerDocument.createDiv({ cls: 'codian-selection-toolbar' });
+    // Build the toolbar detached: `ownerDocument.createDiv` attaches straight to the document,
+    // and a document only tolerates one element ("Only one element on document allowed").
+    const toolbar = createDiv({ cls: 'codian-selection-toolbar' });
     toolbar.setAttribute('role', 'toolbar');
     toolbar.setCssProps({
       left: `${Math.max(8, rect.left + rect.width / 2)}px`,
