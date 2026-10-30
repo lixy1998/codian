@@ -4,6 +4,15 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.3 — 2026-10-30
+
+- **Fix history rows that looked unresponsive**: the click handler was bound to
+  `.codian-history-item-content` only, so clicking the leading status icon or the padding around
+  the row did nothing — the row appeared dead unless you hit the title text. The handler now sits on
+  the row itself; the pin / archive / more / delete buttons on the right already stop propagation.
+  A row that is already the active conversation still does nothing by design, since there is
+  nothing to switch to.
+
 ## 1.7.2 — 2026-10-30
 
 - **Fix `HierarchyRequestError` when selecting chat text**: the selection toolbar was created with

@@ -1093,7 +1093,10 @@ export class ConversationController {
       });
 
       if (!isCurrent) {
-        content.addEventListener('click', (e) => {
+        // Bind on the whole row, not just the title block: the leading icon and the padding
+        // around it are part of the row a user will aim at, and clicking them used to do
+        // nothing at all. The action buttons on the right stop propagation themselves.
+        item.addEventListener('click', (e) => {
           e.stopPropagation();
           if (this.isHistoryNewTabModifierClick(e) && options.onOpenConversationInNewTab) {
             e.preventDefault();
@@ -1117,7 +1120,7 @@ export class ConversationController {
         });
 
         if (options.onOpenConversationInNewTab) {
-          content.addEventListener('auxclick', (e) => {
+          item.addEventListener('auxclick', (e) => {
             if (e.button !== 1) return;
             e.preventDefault();
             e.stopPropagation();
