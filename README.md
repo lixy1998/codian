@@ -35,6 +35,7 @@
   - [Grok](https://docs.x.ai/docs/grok-code-fast-1) (`grok`)
   - [OpenCode](https://opencode.ai/) (`opencode`)
   - [Pi](https://github.com/badlogic/pi-mono) (`pi`)
+  - [CodeBuddy](https://www.npmjs.com/package/@tencent-ai/codebuddy-code) (`codebuddy`) — fork only, see below
 - **Node.js**: Node.js 24 (only required if building from source).
 
 ---
@@ -60,6 +61,51 @@ npm ci
 npm run build
 ```
 Copy the generated `main.js`, `manifest.json`, and `styles.css` to your vault's `.obsidian/plugins/codianz/` directory.
+
+---
+
+## 🍴 This is a fork
+
+This repository is a personal fork of [BCS1037/codian](https://github.com/BCS1037/codian). It keeps the
+upstream plugin ID (`codianz`), so it installs into the same folder and can be updated in place.
+
+### What this fork adds
+
+- **CodeBuddy provider** (`codebuddy`) — drives `codebuddy --acp` through the shared native-ACP layer,
+  with its official mark and teal accent (`#00BC90`). The CLI exposes 16 models, a 960k context window
+  and 7 permission modes. Two details were required to make it work:
+  - The child-process environment is **sanitised before spawn**. CodeBuddy reads dozens of `CODEBUDDY_*`
+    switches that change which bundle it runs; inherited leftovers from an IDE or agent host (for example
+    `CODEBUDDY_FORCE_LITE_WB_BUNDLE`) make `--acp` exit with code 0 and **no output at all**, which is
+    indistinguishable from a broken integration. `CODEBUDDY_API_KEY` / `CODEBUDDY_AUTH_TOKEN` and
+    anything you configured yourself are preserved.
+  - `CODEBUDDY_INTERNET_ENVIRONMENT` defaults to `internal` (the China deployment) unless you set it.
+- **Non-ASCII skill names.** Upstream only lists skill packages whose folder matches
+  `^[a-z0-9]+(?:-[a-z0-9]+)*$` and whose frontmatter `name` equals the folder name, so Chinese-named
+  skills never appear in the picker. This fork relaxes both rules for packages that already exist on disk
+  (the folder becomes the package identity), while creation and renaming stay strict.
+- **Honest reasoning tiers.** CodeBuddy's ACP exposes a single session-level `thought_level` switch with
+  exactly two values (`enabled`, `high`). The effort submenu offers only those instead of a guessed
+  Low/High/Max, which previously produced options that silently did nothing.
+
+### Updating this fork
+
+The community index points at upstream, and Obsidian's updater cannot be redirected. Use
+[BRAT](https://github.com/TfTHacker/obsidian42-brat) instead:
+
+1. Install and enable **BRAT**.
+2. `BRAT` → **Add Beta plugin** → enter `lixy1998/codian`.
+3. Updates come from this repository's releases.
+
+Releases are always published at a version **higher than upstream** (this one is `1.7.1`), so the
+community "update available" badge stays quiet and cannot silently overwrite these changes. If you
+previously installed upstream and want to switch, just add this repo in BRAT — it writes to the same
+`codianz` folder and your settings are kept.
+
+### License
+
+Upstream is AGPL-3.0 and this fork keeps it. Sources are public here; if you redistribute a build, ship
+the corresponding source alongside it.
 
 ---
 

@@ -1,5 +1,22 @@
 # Changelog
 
+> 1.7.1 is a fork release. Everything below is specific to
+> [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
+> [BCS1037/codian](https://github.com/BCS1037/codian).
+
+## 1.7.1 — 2026-10-30
+
+- **New provider: CodeBuddy** (`codebuddy`), driven over ACP:
+  - Registers through the shared native-ACP module, so no provider logic is duplicated. Verified against a live CLI: 16 models with effort options, a 960k context window, and 7 permission modes (`default`, `acceptEdits`, `plan`, `auto`, `dontAsk`, `bypassPermissions`, `fullAccess`).
+  - Ships the official mark and the teal brand accent (`#00BC90`). Without `getProviderIcon` the header used to fall back to another provider's logo, which made a CodeBuddy session look like a Claude one.
+  - Sanitises the child-process environment before spawn. Inherited `CODEBUDDY_*` switches (for example `CODEBUDDY_FORCE_LITE_WB_BUNDLE`) make `--acp` exit with code 0 and no output; `CODEBUDDY_API_KEY` / `CODEBUDDY_AUTH_TOKEN` and user-configured values survive. `CODEBUDDY_INTERNET_ENVIRONMENT` defaults to `internal`.
+  - Model ids gain a `codebuddy/` prefix so selections stay provider-scoped when several providers are enabled.
+- **Skills: read what is already on disk**:
+  - Listing no longer applies the creation-only naming rules. Non-ASCII folder names (Chinese, etc.) are accepted, and a stale frontmatter `name` is resolved in favour of the folder instead of hiding the package. Creating and renaming keep the strict portable-name rule.
+  - Measured on a 62-package vault: 49 skills listed with 12 rejected, versus 60 listed with 1 rejected (`ppt-master` is a multi-skill bundle whose `SKILL.md` sits one level deeper — a structural difference, not a naming one).
+- **CodeBuddy reasoning tiers**: the effort submenu now offers only the tiers the CLI accepts (`enabled` / `high`). The previous Low/High/Max fallback produced options that silently did nothing, because ACP exposes a single session-level `thought_level` switch and the richer per-model `_meta.effortOptions` have no reliable apply channel.
+- **Distribution**: released at a version above upstream and documented for [BRAT](https://github.com/TfTHacker/obsidian42-brat) updates (`lixy1998/codian`), so the community updater cannot overwrite the fork.
+
 ## 1.7.0 — 2026-10-21
 
 - **Multi-Provider Inline Edit & Model Selection**:

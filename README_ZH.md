@@ -35,6 +35,7 @@
   - [Grok](https://docs.x.ai/docs/grok-code-fast-1) (`grok`)
   - [OpenCode](https://opencode.ai/) (`opencode`)
   - [Pi](https://github.com/badlogic/pi-mono) (`pi`)
+  - [CodeBuddy](https://www.npmjs.com/package/@tencent-ai/codebuddy-code) (`codebuddy`) —— 仅本 fork 支持，见下文
 - **Node.js**：Node.js 24（仅从源码编译时需要）。
 
 ---
@@ -60,6 +61,34 @@ npm ci
 npm run build
 ```
 编译完成后，将生成的 `main.js`、`manifest.json` 与 `styles.css` 复制到 Vault 的 `.obsidian/plugins/codianz/` 目录中。
+
+---
+
+## 🍴 关于本 fork
+
+本仓库是 [BCS1037/codian](https://github.com/BCS1037/codian) 的个人 fork。**沿用上游插件 ID（`codianz`）**，因此安装目录一致，可就地替换与升级。
+
+### 本 fork 新增了什么
+
+- **CodeBuddy 提供商**（`codebuddy`）：经共享 native-ACP 层驱动 `codebuddy --acp`，使用官方图标与青绿品牌色（`#00BC90`）。CLI 提供 16 个模型、96 万上下文、7 种权限模式。为了让它能跑通，做了两件必要的事：
+  - **启动前清洗子进程环境**。CodeBuddy 会读取数十个 `CODEBUDDY_*` 开关，其中一部分改变的是"运行哪个 bundle"而非认证。从 IDE 或 agent 宿主继承下来的残留（如 `CODEBUDDY_FORCE_LITE_WB_BUNDLE`）会让 `--acp` **以退出码 0 静默结束、零输出**，与"集成坏了"完全无法区分。`CODEBUDDY_API_KEY` / `CODEBUDDY_AUTH_TOKEN` 以及你自己配置的变量会被保留。
+  - `CODEBUDDY_INTERNET_ENVIRONMENT` 默认补齐为 `internal`（中国区），除非你显式设置。
+- **支持非 ASCII 技能名**。上游只列出目录名匹配 `^[a-z0-9]+(?:-[a-z0-9]+)*$`、且 frontmatter `name` 与目录名完全一致的技能包，中文名技能因此**从不出现在面板里**（且不报错，只是静默消失）。本 fork 对**已存在的**技能包放宽这两条（以目录名为包身份），创建与重命名仍保持严格。
+- **思考档位如实呈现**。CodeBuddy 的 ACP 只有一个会话级 `thought_level` 开关，取值恒为 `enabled` 与 `high`。模型下拉只提供这两个，而不再给出猜测的 Low/High/Max——那些选项点了不会生效。
+
+### 如何更新本 fork
+
+社区索引指向的是上游，而 Obsidian 的更新源无法改写。请改用 [BRAT](https://github.com/TfTHacker/obsidian42-brat)：
+
+1. 安装并启用 **BRAT**；
+2. 打开 BRAT → **Add Beta plugin** → 填 `lixy1998/codian`；
+3. 之后从本仓库的 release 更新。
+
+每次发布的版本号都会**高于上游**（当前为 `1.7.1`），因此社区源的"有更新"提示不会出现，也就无法悄悄覆盖这些改动。若你之前装的是上游版，直接在 BRAT 里添加本仓库即可——它写入同一个 `codianz` 目录，原有设置会保留。
+
+### 许可证
+
+上游为 AGPL-3.0，本 fork 继续沿用。源码公开于此；若你分发构建产物，需同时提供对应源码。
 
 ---
 
