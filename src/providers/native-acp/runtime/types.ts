@@ -23,6 +23,19 @@ export interface NativeAcpRuntimeOptions {
   capabilities: ProviderCapabilities;
   createSubprocess?: (spec: AcpSubprocessLaunchSpec) => NativeAcpSubprocess;
   defaultCommand: string;
+  /**
+   * Sanitizes the final child-process environment before spawn. Providers whose CLI
+   * reacts to inherited host variables (for example CODEBUDDY_* switches that force a
+   * reduced bundle and silently disable ACP) supply this hook to strip them.
+   *
+   * `configuredEnvironment` holds only the entries the user set explicitly for this
+   * provider, so an implementation can strip inherited noise while preserving values
+   * the user really meant to pass (API keys, tokens).
+   */
+  prepareEnvironment?: (
+    env: NodeJS.ProcessEnv,
+    context: { configuredEnvironment: NodeJS.ProcessEnv },
+  ) => NodeJS.ProcessEnv;
   providerId: ProviderId;
   sessionAdapter?: NativeAcpSessionAdapter;
 }

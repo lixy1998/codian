@@ -4,6 +4,7 @@ describe('built-in ProviderModule catalog', () => {
   it('is the single ordered source for chat, workspace, and settings composition', () => {
     expect(BUILT_IN_PROVIDER_MODULES.map(module => module.id)).toEqual([
       'claude',
+      'codebuddy',
       'codex',
       'deepseek',
       'grok',

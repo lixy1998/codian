@@ -29,6 +29,10 @@ export interface NativeAcpProviderModuleOptions {
   defaultCommand: string;
   chatUIConfig?: ProviderChatUIConfig;
   createSessionAdapter?: (plugin: ProviderHost) => NativeAcpSessionAdapter;
+  prepareEnvironment?: (
+    env: NodeJS.ProcessEnv,
+    context: { configuredEnvironment: NodeJS.ProcessEnv },
+  ) => NodeJS.ProcessEnv;
 }
 
 export function createNativeAcpProviderModule(
@@ -38,6 +42,7 @@ export function createNativeAcpProviderModule(
     args: options.args,
     capabilities: options.capabilities,
     defaultCommand: options.defaultCommand,
+    ...(options.prepareEnvironment ? { prepareEnvironment: options.prepareEnvironment } : {}),
     providerId: options.id,
   };
   const createRunner = (plugin: Parameters<ProviderModule['createRuntime']>[0]['plugin']) => (

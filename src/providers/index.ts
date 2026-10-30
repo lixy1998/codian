@@ -1,6 +1,7 @@
 import { ProviderRegistry } from '../core/providers/ProviderRegistry';
 import { ProviderWorkspaceRegistry } from '../core/providers/ProviderWorkspaceRegistry';
 import { claudeProviderRegistration } from './claude/registration';
+import { codebuddyProviderRegistration } from './codebuddy/registration';
 import { codexProviderRegistration } from './codex/registration';
 import { deepseekProviderRegistration } from './deepseek/registration';
 import { grokProviderRegistration } from './grok/registration';
@@ -12,6 +13,7 @@ let builtInProvidersRegistered = false;
 
 export const BUILT_IN_PROVIDER_MODULES = [
   claudeProviderRegistration,
+  codebuddyProviderRegistration,
   codexProviderRegistration,
   deepseekProviderRegistration,
   grokProviderRegistration,

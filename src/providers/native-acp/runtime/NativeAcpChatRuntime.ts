@@ -324,18 +324,21 @@ export class NativeAcpChatRuntime implements ChatRuntime {
     const envVars = parseEnvironmentVariables(
       getRuntimeEnvironmentText(this.plugin.settings, this.providerId),
     );
+    const mergedEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      ...envVars,
+      PATH: getEnhancedPath(
+        envVars.PATH,
+        path.isAbsolute(resolvedCommand) ? resolvedCommand : undefined,
+      ),
+    };
     const spec = {
       args: [...this.options.args],
       command: resolvedCommand,
       cwd,
-      env: {
-        ...process.env,
-        ...envVars,
-        PATH: getEnhancedPath(
-          envVars.PATH,
-          path.isAbsolute(resolvedCommand) ? resolvedCommand : undefined,
-        ),
-      },
+      env: this.options.prepareEnvironment
+        ? this.options.prepareEnvironment(mergedEnv, { configuredEnvironment: envVars })
+        : mergedEnv,
     };
     this.process = this.options.createSubprocess?.(spec) ?? new AcpSubprocess(spec);
     this.process.start();
