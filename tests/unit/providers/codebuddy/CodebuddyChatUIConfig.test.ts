@@ -31,15 +31,13 @@ describe('codebuddyChatUIConfig', () => {
     expect(codebuddyChatUIConfig.getDefaultModel!(bag)).toBe(model);
   });
 
-  it('falls back to effort options when the CLI has not reported thinking levels', () => {
+  it('offers no effort tiers until the CLI reports them', () => {
     const model = encodeProviderModelSelectionId('codebuddy', 'hy4-preview');
 
-    expect(codebuddyChatUIConfig.getReasoningOptions!(model, settings as never)).toEqual([
-      { label: 'Low', value: 'low' },
-      { label: 'High', value: 'high' },
-      { label: 'Max', value: 'max' },
-    ]);
-    expect(codebuddyChatUIConfig.getDefaultReasoningValue!(model, settings as never)).toBe('high');
+    // CodeBuddy accepts only `enabled` / `high`; guessing extra tiers produced options
+    // that silently did nothing, so nothing is offered before discovery instead.
+    expect(codebuddyChatUIConfig.getReasoningOptions!(model, settings as never)).toEqual([]);
+    expect(codebuddyChatUIConfig.getDefaultReasoningValue!(model, settings as never)).toBe('enabled');
   });
 
   it('prefers thinking levels discovered from the session config', () => {

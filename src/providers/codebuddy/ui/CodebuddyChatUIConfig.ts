@@ -46,25 +46,20 @@ export const codebuddyChatUIConfig: ProviderChatUIConfig = {
   },
   getReasoningOptions(_model, settings) {
     const codebuddySettings = getCodebuddyProviderSettings(settings);
-    if (codebuddySettings.discoveredThinkingLevels.length > 0) {
-      return codebuddySettings.discoveredThinkingLevels.map(level => ({
-        ...(level.description ? { description: level.description } : {}),
-        label: level.label,
-        value: level.value,
-      }));
-    }
-    return [
-      { label: 'Low', value: 'low' },
-      { label: 'High', value: 'high' },
-      { label: 'Max', value: 'max' },
-    ];
+    // CodeBuddy exposes a single session-level `thought_level` switch with exactly two
+    // values: `enabled` (use the model default) and `high` (deep reasoning). The richer
+    // per-model tiers in `models[]._meta.effortOptions` have no reliable apply channel
+    // over ACP, so offering them produced options that silently did nothing. Show only
+    // what the CLI will actually accept.
+    return codebuddySettings.discoveredThinkingLevels.map(level => ({
+      ...(level.description ? { description: level.description } : {}),
+      label: level.label,
+      value: level.value,
+    }));
   },
   getDefaultReasoningValue(_model, settings): string {
     const codebuddySettings = getCodebuddyProviderSettings(settings);
-    if (codebuddySettings.discoveredThinkingLevels.length > 0) {
-      return codebuddySettings.discoveredThinkingLevels[0].value;
-    }
-    return 'high';
+    return codebuddySettings.discoveredThinkingLevels[0]?.value ?? 'enabled';
   },
   getContextWindowSize(model, customLimits): number {
     return customLimits?.[model] ?? DEFAULT_CONTEXT_WINDOW;

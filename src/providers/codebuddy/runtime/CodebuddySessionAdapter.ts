@@ -64,7 +64,7 @@ export class CodebuddySessionAdapter implements NativeAcpSessionAdapter {
     if (
       discoveredModels.length === 0
       && availableModes.length === 0
-      && discoveredThinkingLevels.length === 0
+      && !discoveredThinkingLevels
     ) {
       return;
     }
@@ -78,7 +78,9 @@ export class CodebuddySessionAdapter implements NativeAcpSessionAdapter {
       updateCodebuddyProviderSettings(settings, {
         ...(availableModes.length > 0 ? { availableModes } : {}),
         ...(discoveredModels.length > 0 ? { discoveredModels, visibleModels } : {}),
-        ...(discoveredThinkingLevels.length > 0 ? { discoveredThinkingLevels } : {}),
+        // Replace rather than merge: a stale tier left over from an earlier session would
+        // stay selectable even though the CLI no longer accepts it.
+        ...(discoveredThinkingLevels ? { discoveredThinkingLevels } : {}),
       });
     });
     this.plugin.notifyProviderChatOptionsChanged?.(CODEBUDDY_PROVIDER_ID);
@@ -131,37 +133,52 @@ export class CodebuddySessionAdapter implements NativeAcpSessionAdapter {
     sessionId: string;
   }): Promise<void> {
     const thinking = this.findThinkingConfig();
-    const effort = typeof this.plugin.settings.effortLevel === 'string'
-      ? this.plugin.settings.effortLevel
-      : '';
-    if (!thinking || !effort) {
+    if (!thinking) {
       return;
     }
 
+    const requested = typeof this.plugin.settings.effortLevel === 'string'
+      ? this.plugin.settings.effortLevel
+      : '';
+
     if (thinking.type === 'boolean') {
-      if (effort !== 'on' && effort !== 'off') {
+      if (requested !== 'on' && requested !== 'off') {
         return;
       }
       await this.setConfigOption(params.connection, {
         configId: thinking.id,
         sessionId: params.sessionId,
         type: 'boolean',
-        value: effort === 'on',
+        value: requested === 'on',
       });
       return;
     }
 
-    if (thinking.type === 'select') {
-      const options = flattenAcpSessionConfigSelectOptions(thinking.options);
-      const target = options.find(option => option.value === effort);
-      if (target && target.value !== thinking.currentValue) {
-        await this.setConfigOption(params.connection, {
-          configId: thinking.id,
-          sessionId: params.sessionId,
-          type: 'select',
-          value: target.value,
-        });
-      }
+    const options = flattenAcpSessionConfigSelectOptions(thinking.options);
+    if (options.length === 0) {
+      return;
+    }
+
+    const exact = requested ? options.find(option => option.value === requested) : undefined;
+    // The CLI can drop a tier between sessions (for example when the active model changes).
+    // Fall back to a value it does accept and persist that, so the toolbar never shows a
+    // selection the session silently ignored.
+    const target = exact ?? options.find(option => option.value === thinking.currentValue) ?? options[0];
+    if (!target) {
+      return;
+    }
+    if (!exact) {
+      await this.plugin.mutateSettings((settings) => {
+        (settings as Record<string, unknown>).effortLevel = target.value;
+      });
+    }
+    if (target.value !== thinking.currentValue) {
+      await this.setConfigOption(params.connection, {
+        configId: thinking.id,
+        sessionId: params.sessionId,
+        type: 'select',
+        value: target.value,
+      });
     }
   }
 
@@ -191,10 +208,15 @@ export class CodebuddySessionAdapter implements NativeAcpSessionAdapter {
     }
   }
 
-  private extractThinkingLevels(): Array<{ label: string; value: string; description?: string }> {
+  /**
+   * Returns the tiers the session actually accepts, or `null` when the CLI did not report a
+   * thinking config at all (leave the stored list untouched in that case, rather than
+   * wiping it on a partial update).
+   */
+  private extractThinkingLevels(): Array<{ label: string; value: string; description?: string }> | null {
     const thinking = this.findThinkingConfig();
     if (!thinking || thinking.type !== 'select') {
-      return [];
+      return null;
     }
     return flattenAcpSessionConfigSelectOptions(thinking.options).map(option => ({
       ...(option.description ? { description: option.description } : {}),
