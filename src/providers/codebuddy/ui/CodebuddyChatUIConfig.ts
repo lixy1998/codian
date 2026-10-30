@@ -7,6 +7,7 @@ import type {
   ProviderPermissionModeToggleConfig,
   ProviderUIOption,
 } from '../../../core/providers/types';
+import { CODEBUDDY_PROVIDER_ICON } from '../../../shared/icons';
 import { CODEBUDDY_PROVIDER_ID, getCodebuddyProviderSettings } from '../settings';
 
 const DEFAULT_CONTEXT_WINDOW = 960_000;
@@ -95,5 +96,8 @@ export const codebuddyChatUIConfig: ProviderChatUIConfig = {
   },
   getModeSelector(): null {
     return null;
+  },
+  getProviderIcon() {
+    return CODEBUDDY_PROVIDER_ICON;
   },
 };

@@ -20,6 +20,8 @@
   --codian-brand-grok-rgb: 255, 255, 255;
   --codian-brand-deepseek: #4D6BFE;
   --codian-brand-deepseek-rgb: 77, 107, 254;
+  --codian-brand-codebuddy: #00BC90;
+  --codian-brand-codebuddy-rgb: 0, 188, 144;
   --codian-error: #dc3545;
   --codian-error-rgb: 220, 53, 69;
   --codian-compact: #5bc0de;
@@ -132,4 +134,17 @@ body.theme-light .codian-inline-menu-layer {
   --codian-brand: var(--codian-brand-deepseek);
   --codian-brand-rgb: var(--codian-brand-deepseek-rgb);
   --codian-provider-logo: var(--codian-brand-deepseek);
+}
+
+.codian-container[data-provider="codebuddy"] {
+  --codian-brand: var(--codian-brand-codebuddy);
+  --codian-brand-rgb: var(--codian-brand-codebuddy-rgb);
+  --codian-provider-logo: var(--codian-brand-codebuddy);
+}
+
+.codian-inline-input-container[data-provider="codebuddy"],
+.codian-inline-menu-layer[data-provider="codebuddy"] {
+  --codian-brand: var(--codian-brand-codebuddy);
+  --codian-brand-rgb: var(--codian-brand-codebuddy-rgb);
+  --codian-provider-logo: var(--codian-brand-codebuddy);
 }

@@ -72,4 +72,12 @@ describe('codebuddyChatUIConfig', () => {
     expect(codebuddyChatUIConfig.getContextWindowSize('hy4-preview', { 'hy4-preview': 1_000 }))
       .toBe(1_000);
   });
+
+  it('ships the official CodeBuddy mark so the header stops falling back to another provider', () => {
+    const icon = codebuddyChatUIConfig.getProviderIcon?.();
+
+    expect(icon).toBeDefined();
+    expect(icon?.viewBox).toBe('0 0 873 612');
+    expect(icon?.kind).toBe('composite');
+  });
 });
