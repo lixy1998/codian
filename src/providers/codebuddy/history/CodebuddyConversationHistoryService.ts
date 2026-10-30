@@ -33,6 +33,14 @@ function findSessionFile(sessionId: string): string | null {
   return null;
 }
 
+/** Provider session ids this conversation has used, oldest first, recorded by the runtime. */
+function readSessionChain(conversation: Conversation): string[] {
+  const state = conversation.providerState as { sessionChain?: unknown } | undefined;
+  const chain = state?.sessionChain;
+  if (!Array.isArray(chain)) return [];
+  return chain.filter((id): id is string => typeof id === 'string' && id.length > 0);
+}
+
 function blockText(value: unknown): string {
   if (typeof value !== 'object' || value === null) return '';
   const text = (value as { text?: unknown }).text;
@@ -229,13 +237,32 @@ export class CodebuddyConversationHistoryService implements ProviderConversation
     if (!file) {
       return;
     }
-    let raw: string;
-    try {
-      raw = fs.readFileSync(file, 'utf8');
-    } catch {
-      return;
+
+    // A conversation can span several provider sessions: when the CLI could not resume, it started
+    // a fresh one and the earlier turns stayed behind in the old file. Codian records only the
+    // latest id, so the ones before it are kept in `providerState.sessionChain`.
+    //
+    // Deliberately no time-based guessing: provider sessions carry no parent link, and two
+    // conversations in the same vault can overlap minute by minute, which would splice one
+    // conversation's history into another.
+    const chain = readSessionChain(conversation);
+    const files: string[] = [];
+    for (const id of chain) {
+      const piece = findSessionFile(id);
+      if (piece) files.push(piece);
     }
-    const messages = parseTranscript(raw);
+    if (!files.includes(file)) files.push(file);
+
+    const messages: ChatMessage[] = [];
+    for (const piece of files) {
+      let raw: string;
+      try {
+        raw = fs.readFileSync(piece, 'utf8');
+      } catch {
+        continue;
+      }
+      messages.push(...parseTranscript(raw));
+    }
     if (messages.length > 0) {
       conversation.messages = messages;
     }

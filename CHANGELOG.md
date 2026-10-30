@@ -4,6 +4,21 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.7 — 2026-10-30
+
+- **Stitch split conversations back together.** When the CLI fails to resume a session it starts a
+  new one, and the earlier turns stay behind in the old file. Because Codian records only the latest
+  id, a conversation could look like it had lost its beginning — one observed case was spread over
+  three provider sessions (10 + 8 + 2 messages), of which only the last was visible.
+  - `NativeAcpChatRuntime` now appends the previous id to `providerState.sessionChain` whenever the
+    session changes, so the link is never lost again.
+  - `CodebuddyConversationHistoryService` hydrates every session in that chain, oldest first.
+  - Deliberately **no time-based guessing**: provider sessions carry no parent link, and two
+    conversations in one vault can overlap minute by minute, so inferring the chain from timestamps
+    would splice one conversation's history into another.
+  - Verified: the split conversation went from 2 visible messages to 20 (with 106 tool calls), while
+    a neighbouring conversation kept its own 2 and was not contaminated.
+
 ## 1.7.6 — 2026-10-30
 
 - **Restore reasoning too, collapsible.** The transcript now rebuilds the full turn structure —

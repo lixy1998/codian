@@ -301,6 +301,21 @@ export class NativeAcpChatRuntime implements ChatRuntime {
     conversation: Conversation | null;
     sessionInvalidated: boolean;
   }): SessionUpdateResult {
+    const persisted = params.conversation?.sessionId ?? null;
+    const previousState = params.conversation?.providerState as
+      | { sessionChain?: unknown }
+      | undefined;
+    const chain = Array.isArray(previousState?.sessionChain)
+      ? previousState.sessionChain.filter((id): id is string => typeof id === 'string')
+      : [];
+
+    // Remember every session this conversation used. If the CLI ever fails to resume, it starts a
+    // new one and the earlier turns stay in the old file; without this record the history service
+    // has no way to find them again.
+    if (persisted && this.sessionId && persisted !== this.sessionId && !chain.includes(persisted)) {
+      chain.push(persisted);
+    }
+
     return {
       updates: {
         // Fall back to the persisted id when the runtime has not loaded a session yet. Writing
@@ -308,7 +323,10 @@ export class NativeAcpChatRuntime implements ChatRuntime {
         // started, detaching it from its provider transcript for good.
         sessionId: params.sessionInvalidated
           ? null
-          : (this.sessionId ?? params.conversation?.sessionId ?? null),
+          : (this.sessionId ?? persisted ?? null),
+        providerState: (params.conversation?.providerState || chain.length > 0)
+          ? { ...params.conversation?.providerState, sessionChain: chain }
+          : undefined,
       },
     };
   }
