@@ -6,7 +6,7 @@ import type {
   ProviderConversationHistoryService,
   ProviderHistoryPathContext,
 } from '../../../core/providers/types';
-import type { ChatMessage, Conversation, ToolCallInfo } from '../../../core/types';
+import type { ChatMessage, ContentBlock, Conversation, ToolCallInfo } from '../../../core/types';
 
 /**
  * CodeBuddy keeps the transcript next to the CLI, one JSONL per session:
@@ -71,15 +71,25 @@ function outputText(output: unknown): string {
   return '';
 }
 
+/** Reasoning text lives in `rawContent` as `{ type: 'reasoning_text', text }` blocks. */
+function reasoningText(rawContent: unknown): string {
+  if (typeof rawContent === 'string') return rawContent;
+  if (!Array.isArray(rawContent)) return '';
+  return rawContent.map(blockText).filter(Boolean).join('\n');
+}
+
 /**
- * Keeps conversational turns plus the tool calls that ran inside them. Reasoning and generated
- * titles are dropped — they add bulk without helping to recognise a conversation — but dropping
- * tool calls hides what the assistant actually did, leaving replies that mention work ("patch
- * applied", "pushed") with no visible steps behind them.
+ * Rebuilds the full turn structure: reasoning, prose and tool calls in the order they happened.
+ *
+ * `contentBlocks` is what the renderer walks when it is present, so every piece has to be in it —
+ * text included, otherwise the prose disappears. Thinking blocks and tool cards both render
+ * collapsed (`isExpanded: false`), which keeps a long transcript readable while leaving the detail
+ * one click away.
  */
 function parseTranscript(raw: string): ChatMessage[] {
   const messages: ChatMessage[] = [];
   const toolCallsByCallId = new Map<string, ToolCallInfo>();
+  let current: ChatMessage | null = null;
 
   const startAssistant = (timestamp: number): ChatMessage => {
     const message: ChatMessage = {
@@ -89,7 +99,17 @@ function parseTranscript(raw: string): ChatMessage[] {
       timestamp,
     };
     messages.push(message);
+    current = message;
     return message;
+  };
+
+  /** Reasoning and tool calls can precede the prose of the same reply; keep them on one message. */
+  const assistantFor = (timestamp: number): ChatMessage => (
+    current?.role === 'assistant' ? current : startAssistant(timestamp)
+  );
+
+  const pushBlock = (message: ChatMessage, block: ContentBlock): void => {
+    message.contentBlocks = [...(message.contentBlocks ?? []), block];
   };
 
   for (const line of raw.split('\n')) {
@@ -107,6 +127,7 @@ function parseTranscript(raw: string): ChatMessage[] {
       type?: unknown;
       timestamp?: unknown;
       content?: unknown;
+      rawContent?: unknown;
       arguments?: unknown;
       callId?: unknown;
       name?: unknown;
@@ -114,32 +135,63 @@ function parseTranscript(raw: string): ChatMessage[] {
       status?: unknown;
     };
     const timestamp = typeof entry.timestamp === 'number' ? entry.timestamp : Date.now();
+    const entryId = typeof entry.id === 'string' ? entry.id : null;
 
     if (entry.type === 'message' && typeof entry.role === 'string') {
       const text = messageText(entry.content);
       if (!text.trim()) continue;
-      messages.push({
-        id: typeof entry.id === 'string' ? entry.id : `codebuddy-history-${messages.length}`,
-        role: entry.role === 'user' ? 'user' : 'assistant',
-        content: text,
-        timestamp,
-      });
+      if (entry.role === 'user') {
+        const message: ChatMessage = {
+          id: entryId ?? `codebuddy-history-${messages.length}`,
+          role: 'user',
+          content: text,
+          contentBlocks: [{ type: 'text', content: text }],
+          timestamp,
+        };
+        messages.push(message);
+        current = message;
+        continue;
+      }
+      const target = assistantFor(timestamp);
+      if (target.content.trim().length > 0) {
+        const message: ChatMessage = {
+          id: entryId ?? `codebuddy-history-${messages.length}`,
+          role: 'assistant',
+          content: text,
+          contentBlocks: [{ type: 'text', content: text }],
+          timestamp,
+        };
+        messages.push(message);
+        current = message;
+        continue;
+      }
+      target.content = text;
+      if (entryId) target.id = entryId;
+      pushBlock(target, { type: 'text', content: text });
+      continue;
+    }
+
+    if (entry.type === 'reasoning') {
+      const text = reasoningText(entry.rawContent) || messageText(entry.content);
+      if (!text.trim()) continue;
+      pushBlock(assistantFor(timestamp), { type: 'thinking', content: text });
       continue;
     }
 
     if (entry.type === 'function_call') {
-      const owner = messages[messages.length - 1];
-      const target = owner?.role === 'assistant' ? owner : startAssistant(timestamp);
+      const target = assistantFor(timestamp);
       const callId = typeof entry.callId === 'string'
         ? entry.callId
-        : (typeof entry.id === 'string' ? entry.id : `call-${toolCallsByCallId.size}`);
+        : (entryId ?? `call-${toolCallsByCallId.size}`);
       const info: ToolCallInfo = {
         id: callId,
         name: typeof entry.name === 'string' ? entry.name : 'tool',
         input: parseArguments(entry.arguments),
         status: 'completed',
+        isExpanded: false,
       };
       target.toolCalls = [...(target.toolCalls ?? []), info];
+      pushBlock(target, { type: 'tool_use', toolId: callId });
       toolCallsByCallId.set(callId, info);
       continue;
     }
@@ -154,7 +206,9 @@ function parseTranscript(raw: string): ChatMessage[] {
   }
 
   return messages.filter(message => (
-    message.content.trim().length > 0 || (message.toolCalls?.length ?? 0) > 0
+    message.content.trim().length > 0
+    || (message.toolCalls?.length ?? 0) > 0
+    || (message.contentBlocks?.length ?? 0) > 0
   ));
 }
 

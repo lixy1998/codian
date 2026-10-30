@@ -4,6 +4,16 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.6 — 2026-10-30
+
+- **Restore reasoning too, collapsible.** The transcript now rebuilds the full turn structure —
+  reasoning, prose and tool calls — in the order they happened, instead of only the prose.
+  - Everything lands in `contentBlocks` (`thinking` / `text` / `tool_use`), which is what the
+    renderer walks; text has to be in there too or the prose disappears.
+  - Thinking blocks and tool cards both render collapsed by default (`isExpanded: false`), so a
+    long transcript stays scannable with detail one click away. Measured on one conversation:
+    8 messages, 51 thinking blocks, 71 tool calls, 0 expanded.
+
 ## 1.7.5 — 2026-10-30
 
 - **Hydrate tool calls, not just text.** 1.7.4 restored the conversational turns but dropped
