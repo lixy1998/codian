@@ -185,9 +185,12 @@ export function registerFileLinkHandler(
   // Links built by our renderer are plain anchors, so they never emit the
   // 'hover-link' event that Obsidian's own MarkdownRenderer wires up. Forward
   // the hover to the Page preview core plugin so these links get a preview too.
+  // Obsidian-rendered links (.internal-link) need the same forwarding: links
+  // whose display text MarkdownRenderer already resolved never pass through our
+  // wikilink builder, so they would otherwise only respond to clicks.
   component.registerDomEvent(container, 'mouseover', (event: MouseEvent) => {
     const link = (event.target as HTMLElement | null)?.closest(
-      'a.codian-file-link'
+      'a.codian-file-link, a.internal-link'
     ) as HTMLAnchorElement | null;
     if (!link) return;
 
