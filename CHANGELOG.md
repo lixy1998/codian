@@ -4,6 +4,27 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.9 — 2026-10-31
+
+- **The composer wraps again, and grows with what you type.** The CodeMirror composer replaced the
+  DOM textarea but never enabled `EditorView.lineWrapping`, so a long prompt stayed on one
+  horizontally scrolling line. It also stayed pinned to its 60px floor, because `autoResizeTextarea`
+  still measured the source textarea — which is `display:none` now and therefore never changed size.
+  The editor's content height now drives the same `--codian-textarea-min-height` variable, capped at
+  the same 55%-of-view height as before.
+- **Fixed CodeBuddy losing the conversation on every restart.** `session/load` was treated as failed
+  whenever the response omitted `sessionId`, which CodeBuddy always does: against CodeBuddy 2.179 the
+  response carries only `models`/`modes`/`configOptions`/`multitaskOn` while it replays the whole
+  transcript (14 `session/update` notifications in the probe). The runtime fell through to
+  `newSession`, so every restart, tab rebuild or conversation switch opened an empty provider
+  session — the UI still showed history from Codian's own store while the model had none.
+  - The requested id is now kept when the response omits it. Verified that the CLI accepts an id it
+    does not know and creates the session under it, so a genuinely missing session still recovers
+    instead of erroring.
+  - Unlike the read-side stitching in 1.7.7, which repaired the transcript after the fact, this keeps
+    the provider session itself intact.
+  - Genuine load failures are logged instead of swallowed.
+
 ## 1.7.8 — 2026-10-31
 
 - **`initialize` gets its own timeout (30s → 120s).** The first request on a fresh connection pays
