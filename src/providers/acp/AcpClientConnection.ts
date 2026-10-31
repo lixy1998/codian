@@ -54,6 +54,12 @@ type SessionNotificationListener = (
 
 // ACP prompt turns are long-running RPCs; session/update notifications stream progress until the final response.
 const ACP_PROMPT_TURN_TIMEOUT_MS = 0;
+/**
+ * `initialize` is the first request on a fresh connection, so it pays for the whole CLI cold
+ * start. Allowing two minutes keeps a slow or memory-starved machine usable instead of failing
+ * at 30s with a message that looks like a broken provider.
+ */
+const ACP_INITIALIZE_TIMEOUT_MS = 120_000;
 
 export interface AcpFileSystemDelegate {
   readTextFile?: (request: AcpReadTextFileRequest) => Promise<AcpReadTextFileResponse>;
@@ -142,7 +148,12 @@ export class AcpClientConnection {
       protocolVersion: partialRequest.protocolVersion ?? 1,
     };
 
-    const response = await this.requestWithFallback<AcpInitializeResponse>('initialize', request);
+    const response = await this.requestWithFallback<AcpInitializeResponse>('initialize', request, {
+      // The first request absorbs the CLI's entire cold start: process spawn, bundle parsing and
+      // MCP discovery. On a memory-constrained machine that repeatedly takes 30-60s because V8
+      // ends up paging, which is far beyond the 30s default used for ordinary requests.
+      timeoutMs: ACP_INITIALIZE_TIMEOUT_MS,
+    });
     this.agentInfo = response.agentInfo ?? null;
     this.agentCapabilities = response.agentCapabilities ?? null;
     this.authMethods = response.authMethods ?? null;

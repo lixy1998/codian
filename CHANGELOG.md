@@ -4,6 +4,18 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.8 — 2026-10-31
+
+- **`initialize` gets its own timeout (30s → 120s).** The first request on a fresh connection pays
+  for the CLI's whole cold start — process spawn, bundle parsing, MCP discovery. On a
+  memory-constrained machine that routinely takes 30–60s because V8 ends up paging, so the default
+  30s budget failed with `Request timeout: initialize (30000ms)` even though the provider was
+  configured correctly. Measured on two machines with identical plugin and CLI versions: 2.5–3.3s
+  on the machine with free memory, 25.9–59.5s on the one at 0.98GB free.
+  - Ordinary requests keep the 30s default; only startup is patient.
+  - This makes a slow machine usable, it does not make it faster — the cold start is still bound by
+    available memory.
+
 ## 1.7.7 — 2026-10-30
 
 - **Stitch split conversations back together.** When the CLI fails to resume a session it starts a
