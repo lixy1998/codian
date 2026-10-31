@@ -13,6 +13,10 @@ import {
 } from '@codemirror/view';
 import { setIcon } from 'obsidian';
 
+import {
+  calculateTextareaMaxHeight,
+  TEXTAREA_BASE_MIN_HEIGHT,
+} from '../ui/textareaResize';
 import type { VaultContextReference } from './types';
 
 const refreshDecorationsEffect = StateEffect.define<void>();
@@ -278,6 +282,10 @@ export class LivePreviewComposer {
       doc: options.initialValue ?? '',
       extensions: [
         history(),
+        // CodeMirror does not wrap by default, which turned the composer into a single
+        // horizontally scrolling line. The DOM textarea this composer replaces wrapped,
+        // so the behaviour is restored explicitly.
+        EditorView.lineWrapping,
         keymap.of([...defaultKeymap, ...historyKeymap]),
         EditorView.editorAttributes.of({ class: 'codian-live-preview-composer' }),
         this.placeholderCompartment.of(placeholder(options.placeholder ?? '')),
@@ -286,7 +294,12 @@ export class LivePreviewComposer {
           keydown: (event) => this.handleKeydown(event),
         })),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) this.options.onChange?.(update.state.doc.toString());
+          if (update.docChanged) {
+            this.options.onChange?.(update.state.doc.toString());
+            // The host textarea is display:none, so `autoResizeTextarea` never sees this
+            // composer. Drive the shared height variable from the CodeMirror metrics instead.
+            this.syncHeight();
+          }
           if (update.selectionSet) {
             const selection = update.state.selection.main;
             this.options.onSelectionChange?.(selection.from, selection.to);
@@ -295,6 +308,9 @@ export class LivePreviewComposer {
       ],
     });
     this.view = new EditorView({ state, parent: parentEl });
+    // Measure once layout settles so restored drafts start at the right height.
+    const frameWindow = parentEl.ownerDocument.defaultView ?? window;
+    frameWindow.requestAnimationFrame(() => this.syncHeight());
   }
 
   get contentDOM(): HTMLElement {
@@ -338,6 +354,24 @@ export class LivePreviewComposer {
 
   focus(): void {
     this.view.focus();
+  }
+
+  /**
+   * Grows the composer host with its content, mirroring `autoResizeTextarea` for the
+   * hidden textarea. The host reads `--codian-textarea-min-height`, so writing that one
+   * variable is enough to resize it; the cap stays at 55% of the view height.
+   */
+  private syncHeight(): void {
+    const hostEl = this.view.dom.parentElement;
+    if (!hostEl) return;
+    const viewHeight = hostEl.closest('.codian-container')?.clientHeight ?? window.innerHeight;
+    const maxHeight = calculateTextareaMaxHeight(viewHeight);
+    const contentHeight = Math.min(this.view.contentHeight, maxHeight);
+    const minHeight = Math.max(contentHeight, TEXTAREA_BASE_MIN_HEIGHT);
+    hostEl.setCssProps({
+      '--codian-textarea-max-height': `${maxHeight}px`,
+      '--codian-textarea-min-height': `${minHeight}px`,
+    });
   }
 
   isCaretOnEdgeRow(direction: 'up' | 'down'): boolean | null {
