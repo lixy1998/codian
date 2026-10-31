@@ -126,20 +126,29 @@ export class NativeAcpChatRuntime implements ChatRuntime {
       await this.startProcess();
       const cwd = getVaultPath(this.plugin.app) ?? process.cwd();
       if (this.targetSessionId) {
+        const targetSessionId = this.targetSessionId;
         try {
           const response = await this.connection!.loadSession({
             cwd,
             mcpServers: [],
-            sessionId: this.targetSessionId ?? null,
+            sessionId: targetSessionId,
           });
-          this.sessionId = response.sessionId ?? null;
-          if (this.sessionId) {
-            await this.options.sessionAdapter?.syncSessionConfig({
-              ...response,
-              sessionId: this.sessionId,
-            });
-          }
-        } catch {
+          // CodeBuddy answers `session/load` with models/modes/configOptions only and no
+          // `sessionId`, even when it has just replayed the whole transcript. Treating that
+          // as "load failed" sent every runtime restart into `newSession` below, so the model
+          // silently started over with an empty context while the UI still showed history.
+          // The requested id is the loaded session; fall back to it instead of null.
+          const loadedSessionId = response.sessionId ?? targetSessionId;
+          this.sessionId = loadedSessionId;
+          await this.options.sessionAdapter?.syncSessionConfig({
+            ...response,
+            sessionId: loadedSessionId,
+          });
+        } catch (error) {
+          console.warn(
+            `[codian] failed to load ${this.providerId} session ${targetSessionId}`,
+            error,
+          );
           this.sessionId = null;
         }
       }
