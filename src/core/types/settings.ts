@@ -175,6 +175,10 @@ export interface CodianSettings {
   /** Fence languages dispatched to registered plugin code block processors in chat. */
   pluginRenderedFenceLanguages: string[];
   expandFileEditsByDefault: boolean;
+  /** Group a turn's thinking/tool/subagent cards into one collapsible process block. */
+  groupProcessSteps: boolean;
+  /** Keep that process block expanded while the turn is still streaming. */
+  expandProcessWhileStreaming: boolean;
   chatViewPlacement: ChatViewPlacement;
   chatNavigationMode: ChatNavigationMode;
 

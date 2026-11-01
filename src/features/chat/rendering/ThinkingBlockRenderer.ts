@@ -16,6 +16,8 @@ export interface ThinkingBlockState {
 
 export interface ThinkingBlockOptions {
   onToggle?: (isExpanded: boolean) => void;
+  /** Expand as soon as the block appears (default: false). */
+  initiallyExpanded?: boolean;
 }
 
 export function createThinkingBlock(
@@ -53,10 +55,11 @@ export function createThinkingBlock(
     content: '',
     startTime,
     timerInterval,
-    isExpanded: false,
+    isExpanded: options.initiallyExpanded === true,
   };
 
   setupCollapsible(wrapperEl, header, contentEl, state, {
+    initiallyExpanded: options.initiallyExpanded === true,
     onToggle: options.onToggle,
   });
 
@@ -72,7 +75,10 @@ export async function appendThinkingContent(
   await renderContent(state.contentEl, state.content);
 }
 
-export function finalizeThinkingBlock(state: ThinkingBlockState): number {
+export function finalizeThinkingBlock(
+  state: ThinkingBlockState,
+  options: { keepExpanded?: boolean } = {},
+): number {
   // Stop the timer
   if (state.timerInterval) {
     window.clearInterval(state.timerInterval);
@@ -84,6 +90,12 @@ export function finalizeThinkingBlock(state: ThinkingBlockState): number {
 
   // Update label to show final duration (without "...")
   state.labelEl.setText(t('chat.thinking.completed', { seconds: durationSeconds }));
+
+  // Inside a process group the enclosing disclosure handles collapsing, so keep
+  // the reasoning visible for the rest of the turn (unless the user folded it).
+  if (options.keepExpanded && state.isExpanded) {
+    return durationSeconds;
+  }
 
   // Collapse when done and sync state
   const header = state.wrapperEl.querySelector('.codian-thinking-header');

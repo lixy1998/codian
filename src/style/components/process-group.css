@@ -1,0 +1,102 @@
+/* Collapsible "process" group: wraps one turn's thinking, tool calls and
+   subagent cards. Expanded while streaming, collapsed once the answer is done. */
+
+.codian-process-group {
+  margin: 6px 0;
+}
+
+.codian-process-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 2px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  user-select: none;
+}
+
+.codian-process-header:hover {
+  color: var(--text-normal);
+  background-color: var(--background-modifier-hover);
+}
+
+.codian-process-header:focus-visible {
+  outline: 2px solid var(--text-accent);
+  outline-offset: 1px;
+}
+
+.codian-process-icon {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  opacity: 0.8;
+}
+
+.codian-process-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.codian-process-chevron {
+  flex: 0 0 auto;
+  font-size: 10px;
+  line-height: 1;
+  opacity: 0.6;
+  transition: transform 150ms ease;
+}
+
+.codian-process-group.expanded .codian-process-chevron {
+  transform: rotate(180deg);
+}
+
+.codian-process-body {
+  padding-block: 2px;
+  padding-inline-start: 10px;
+  margin-inline-start: 6px;
+  border-inline-start: 2px solid var(--background-modifier-border);
+}
+
+.codian-process-body > *:first-child {
+  margin-top: 0;
+}
+
+.codian-process-body > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Live group: still streaming, so colour the header and gently pulse the icon. */
+.codian-process-group--live .codian-process-header {
+  color: var(--codian-brand, var(--text-accent));
+}
+
+.codian-process-group--live .codian-process-icon {
+  animation: codian-process-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes codian-process-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .codian-process-group--live .codian-process-icon {
+    animation: none;
+  }
+
+  .codian-process-chevron {
+    transition: none;
+  }
+}

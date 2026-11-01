@@ -10,10 +10,19 @@ import type { ChatRewindMode } from '../../../core/runtime/types';
 import {
   isWriteEditTool,
   TOOL_APPLY_PATCH,
+  TOOL_ASK_USER_QUESTION,
+  TOOL_ENTER_PLAN_MODE,
+  TOOL_EXIT_PLAN_MODE,
   TOOL_WRITE_STDIN,
 } from '../../../core/tools/toolNames';
 import { extractToolResultContent } from '../../../core/tools/toolResultContent';
-import type { ChatMessage, ImageAttachment, SubagentInfo, ToolCallInfo } from '../../../core/types';
+import type {
+  ChatMessage,
+  ContentBlock,
+  ImageAttachment,
+  SubagentInfo,
+  ToolCallInfo,
+} from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import { getUserDisplayText } from '../../../utils/context';
 import { formatDurationMmSs } from '../../../utils/date';
@@ -35,6 +44,7 @@ import {
   restoreDisplayOnlyCodeFences,
 } from './DisplayOnlyCodeFences';
 import { renderMermaidDiagrams } from './MermaidRenderer';
+import { renderStoredProcessGroup } from './ProcessGroupRenderer';
 import { createSessionLink, registerSessionLinkHandler } from './sessionLinks';
 import { resolveSubagentAdapter } from './subagentAdapterResolution';
 import {
@@ -165,6 +175,17 @@ export class MessageRenderer {
 
   private shouldExpandFileEditsByDefault(): boolean {
     return this.plugin.settings?.expandFileEditsByDefault === true;
+  }
+
+  private shouldGroupProcessSteps(): boolean {
+    return this.plugin.settings?.groupProcessSteps !== false;
+  }
+
+  /** Prompts that must stay visible outside a collapsed process group. */
+  private isInteractiveToolName(name: string): boolean {
+    return name === TOOL_ASK_USER_QUESTION
+      || name === TOOL_ENTER_PLAN_MODE
+      || name === TOOL_EXIT_PLAN_MODE;
   }
 
   private getUserMessageTextToShow(msg: ChatMessage): string {
@@ -454,10 +475,12 @@ export class MessageRenderer {
 
     if (msg.contentBlocks && msg.contentBlocks.length > 0) {
       const renderedToolIds = new Set<string>();
-      for (const block of msg.contentBlocks) {
+      const blocks = msg.contentBlocks;
+
+      const renderBlock = (parentEl: HTMLElement, block: ContentBlock): void => {
         if (block.type === 'thinking') {
           renderStoredThinkingBlock(
-            contentEl,
+            parentEl,
             block.content,
             block.durationSeconds,
             (el, md) => this.renderContent(el, md)
@@ -467,19 +490,18 @@ export class MessageRenderer {
           hadLegacyInterruptIndicator ||= normalized.interrupted;
           // Skip empty or whitespace-only text blocks to avoid extra gaps
           if (!normalized.content.trim()) {
-            continue;
+            return;
           }
-          const textEl = contentEl.createDiv({ cls: 'codian-text-block' });
+          const textEl = parentEl.createDiv({ cls: 'codian-text-block' });
           void this.renderContent(textEl, normalized.content);
           this.addTextCopyButton(textEl, normalized.content);
         } else if (block.type === 'tool_use') {
           const toolCall = msg.toolCalls?.find(tc => tc.id === block.toolId);
-          if (toolCall) {
-            this.renderToolCall(contentEl, toolCall, msg);
-            renderedToolIds.add(toolCall.id);
-          }
+          if (!toolCall) return;
+          this.renderToolCall(parentEl, toolCall, msg);
+          renderedToolIds.add(toolCall.id);
         } else if (block.type === 'context_compacted') {
-          const boundaryEl = contentEl.createDiv({ cls: 'codian-compact-boundary' });
+          const boundaryEl = parentEl.createDiv({ cls: 'codian-compact-boundary' });
           boundaryEl.createSpan({ cls: 'codian-compact-boundary-label', text: 'Conversation compacted' });
         } else if (block.type === 'subagent') {
           const taskToolCall = msg.toolCalls?.find((toolCall) => {
@@ -488,11 +510,56 @@ export class MessageRenderer {
             return adapter?.protocol === 'managed-agent'
               && adapter.isSpawnTool(toolCall.name);
           });
-          if (!taskToolCall) continue;
+          if (!taskToolCall) return;
 
-          this.renderTaskSubagent(contentEl, taskToolCall, block.mode);
+          this.renderTaskSubagent(parentEl, taskToolCall, block.mode);
           renderedToolIds.add(taskToolCall.id);
         }
+      };
+
+      const isProcessBlock = (block: ContentBlock): boolean => {
+        if (block.type === 'thinking' || block.type === 'subagent') return true;
+        if (block.type !== 'tool_use') return false;
+        const toolCall = msg.toolCalls?.find(tc => tc.id === block.toolId);
+        if (!toolCall) return false;
+        if (!this.shouldRenderToolCall(toolCall, msg)) return false;
+        return !this.isInteractiveToolName(toolCall.name);
+      };
+
+      const grouping = this.shouldGroupProcessSteps();
+
+      for (let index = 0; index < blocks.length; index += 1) {
+        const block = blocks[index];
+        if (grouping && isProcessBlock(block)) {
+          const run: ContentBlock[] = [];
+          let cursor = index;
+          while (cursor < blocks.length && isProcessBlock(blocks[cursor])) {
+            run.push(blocks[cursor]);
+            cursor += 1;
+          }
+          const thinkingSeconds = run.reduce<number>((total, entry) => (
+            entry.type === 'thinking' && entry.durationSeconds
+              ? total + entry.durationSeconds
+              : total
+          ), 0);
+          // Mark members as rendered now: group content renders lazily on expand,
+          // and the defensive fallback below must not duplicate them.
+          for (const runBlock of run) {
+            if (runBlock.type === 'tool_use') renderedToolIds.add(runBlock.toolId);
+            if (runBlock.type === 'subagent') renderedToolIds.add(runBlock.subagentId);
+          }
+          renderStoredProcessGroup(
+            contentEl,
+            (bodyEl) => {
+              for (const runBlock of run) renderBlock(bodyEl, runBlock);
+            },
+            run.length,
+            thinkingSeconds > 0 ? thinkingSeconds : undefined,
+          );
+          index = cursor - 1;
+          continue;
+        }
+        renderBlock(contentEl, block);
       }
 
       // Defensive fallback: preserve tool visibility when contentBlocks/toolCalls drift on reload.

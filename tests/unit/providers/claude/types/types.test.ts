@@ -120,6 +120,8 @@ describe('types.ts', () => {
         deferMathRenderingDuringStreaming: true,
         pluginRenderedFenceLanguages: [],
         expandFileEditsByDefault: false,
+        groupProcessSteps: true,
+        expandProcessWhileStreaming: true,
         chatViewPlacement: 'right-sidebar',
         chatNavigationMode: 'conversation-rail',
         hiddenProviderCommands: {
@@ -176,6 +178,8 @@ describe('types.ts', () => {
         deferMathRenderingDuringStreaming: true,
         pluginRenderedFenceLanguages: [],
         expandFileEditsByDefault: false,
+        groupProcessSteps: true,
+        expandProcessWhileStreaming: true,
         chatViewPlacement: 'right-sidebar',
         chatNavigationMode: 'conversation-rail',
         hiddenProviderCommands: {
@@ -233,6 +237,8 @@ describe('types.ts', () => {
         deferMathRenderingDuringStreaming: true,
         pluginRenderedFenceLanguages: [],
         expandFileEditsByDefault: true,
+        groupProcessSteps: true,
+        expandProcessWhileStreaming: true,
         chatViewPlacement: 'right-sidebar',
         chatNavigationMode: 'conversation-rail',
         hiddenProviderCommands: {

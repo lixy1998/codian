@@ -12,8 +12,11 @@ import type {
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
 import type { EditorSelectionContext } from '../../../utils/editor';
+import type { ProcessGroupState } from '../rendering/ProcessGroupRenderer';
 import type { ThinkingBlockState } from '../rendering/ThinkingBlockRenderer';
 import type { WriteEditState } from '../rendering/WriteEditRenderer';
+
+export type { ProcessGroupState };
 
 /** Queued message waiting to be sent after current streaming completes. */
 export interface QueuedMessage {
@@ -82,6 +85,8 @@ export interface ChatStateData {
   currentTextEl: HTMLElement | null;
   currentTextContent: string;
   currentThinkingState: ThinkingBlockState | null;
+  /** Collapsible group wrapping the current turn's process steps. */
+  currentProcessGroup: ProcessGroupState | null;
   thinkingEl: HTMLElement | null;
   queueIndicatorEl: HTMLElement | null;
   /** Debounce timeout for showing thinking indicator after inactivity. */

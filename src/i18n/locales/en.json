@@ -355,6 +355,11 @@
       "completed": "Thought for {seconds}s",
       "label": "Thought"
     },
+    "process": {
+      "running": "Process · {count} steps · {seconds}s",
+      "completed": "Process · {count} steps · {duration}",
+      "summary": "Process · {count} steps"
+    },
     "suggestions": {
       "loading": "Loading…",
       "noMatches": "No matches",
@@ -770,6 +775,14 @@
     "expandFileEditsByDefault": {
       "name": "Expand file edits by default",
       "desc": "Show Write and Edit diffs expanded when they first appear."
+    },
+    "groupProcessSteps": {
+      "name": "Group process steps",
+      "desc": "Collect a turn's thinking, tool calls and subagents into one collapsible block that folds away when the answer is ready."
+    },
+    "expandProcessWhileStreaming": {
+      "name": "Expand process while running",
+      "desc": "Keep that block expanded while the turn streams so you can watch the work, then collapse it when the turn finishes."
     },
     "chatViewPlacement": {
       "name": "Open Codian in",

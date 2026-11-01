@@ -4,6 +4,7 @@ import type {
   ChatStateCallbacks,
   ChatStateData,
   PendingToolCall,
+  ProcessGroupState,
   QueuedMessage,
   TabAttention,
   TabReviewOutcome,
@@ -28,6 +29,7 @@ function createInitialState(): ChatStateData {
     currentTextEl: null,
     currentTextContent: '',
     currentThinkingState: null,
+    currentProcessGroup: null,
     thinkingEl: null,
     queueIndicatorEl: null,
     thinkingIndicatorTimeout: null,
@@ -222,6 +224,14 @@ export class ChatState {
 
   set currentThinkingState(value: ThinkingBlockState | null) {
     this.state.currentThinkingState = value;
+  }
+
+  get currentProcessGroup(): ProcessGroupState | null {
+    return this.state.currentProcessGroup;
+  }
+
+  set currentProcessGroup(value: ProcessGroupState | null) {
+    this.state.currentProcessGroup = value;
   }
 
   get thinkingEl(): HTMLElement | null {
@@ -476,6 +486,7 @@ export class ChatState {
     this.state.currentTextEl = null;
     this.state.currentTextContent = '';
     this.state.currentThinkingState = null;
+    this.state.currentProcessGroup = null;
     this.state.isStreaming = false;
     this.state.cancelRequested = false;
     // Clear thinking indicator timeout

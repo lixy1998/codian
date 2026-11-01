@@ -54,6 +54,8 @@ export const DEFAULT_CODIAN_SETTINGS: CodianSettings = {
   deferMathRenderingDuringStreaming: true,
   pluginRenderedFenceLanguages: [],
   expandFileEditsByDefault: false,
+  groupProcessSteps: true,
+  expandProcessWhileStreaming: true,
   chatViewPlacement: 'right-sidebar',
   chatNavigationMode: 'conversation-rail',
 

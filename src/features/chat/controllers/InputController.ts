@@ -705,6 +705,9 @@ export class InputController {
           }
         }
 
+        // Collapse the turn's process steps so only the answer stays visible.
+        streamController.finalizeActiveProcessGroup?.();
+
         state.currentContentEl = null;
 
         await streamController.finalizeCurrentThinkingBlock(finalAssistantMsg);

@@ -17,6 +17,8 @@ import {
   isWriteEditTool,
   TOOL_APPLY_PATCH,
   TOOL_ASK_USER_QUESTION,
+  TOOL_ENTER_PLAN_MODE,
+  TOOL_EXIT_PLAN_MODE,
   TOOL_SUBAGENT,
   TOOL_TODO_WRITE,
   TOOL_WRITE,
@@ -51,6 +53,13 @@ import {
   hasDeferredDiagramFence,
 } from '../rendering/DisplayOnlyCodeFences';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
+import {
+  addProcessStep,
+  createProcessGroup,
+  finalizeProcessGroup,
+  freezeProcessGroup,
+  type ProcessGroupState,
+} from '../rendering/ProcessGroupRenderer';
 import { resolveSubagentAdapter } from '../rendering/subagentAdapterResolution';
 import {
   type AsyncSubagentState,
@@ -116,6 +125,8 @@ export class StreamController {
   private viewportVisible = true;
   private pendingToolOutputFrames = new Map<string, ScheduledAnimationFrame>();
   private pendingScrollFrame: ScheduledAnimationFrame | null = null;
+  /** Process groups created during the current turn, collapsed as one when it ends. */
+  private activeProcessGroups: ProcessGroupState[] = [];
 
   // Provider lifecycle agent tracking (spawn → wait/close lifecycle)
   private lifecycleSubagentStates = new Map<string, SubagentState | AsyncSubagentState>(); // spawn callId → rendered state
@@ -408,7 +419,7 @@ export class StreamController {
     if (state.currentContentEl) {
       state.pendingTools.set(chunk.id, {
         toolCall,
-        parentEl: state.currentContentEl,
+        parentEl: this.getToolParentEl(chunk.name),
       });
       if (chunk.showWhileRunning) {
         this.flushPendingTools();
@@ -416,6 +427,23 @@ export class StreamController {
         this.showThinkingIndicator();
       }
     }
+  }
+
+  /** Parent for a tool card: interactive prompts stay outside the process group. */
+  private getToolParentEl(name: string): HTMLElement | null {
+    if (this.shouldRenderToolOutsideProcessGroup(name)) {
+      this.sealProcessGroup();
+      return this.deps.state.currentContentEl;
+    }
+    this.noteProcessStep();
+    return this.getProcessContainerEl();
+  }
+
+  /** Tools whose UI must remain visible even when process steps are collapsed. */
+  private shouldRenderToolOutsideProcessGroup(name: string): boolean {
+    return name === TOOL_ASK_USER_QUESTION
+      || name === TOOL_ENTER_PLAN_MODE
+      || name === TOOL_EXIT_PLAN_MODE;
   }
 
   private ensureRegularToolCallVisibility(toolCall: ToolCallInfo, msg: ChatMessage): void {
@@ -429,7 +457,7 @@ export class StreamController {
     if (!state.currentContentEl) return;
     state.pendingTools.set(toolCall.id, {
       toolCall,
-      parentEl: state.currentContentEl,
+      parentEl: this.getToolParentEl(toolCall.name),
     });
     this.showThinkingIndicator();
   }
@@ -515,6 +543,65 @@ export class StreamController {
 
   private shouldExpandFileEditsByDefault(): boolean {
     return this.deps.plugin.settings.expandFileEditsByDefault === true;
+  }
+
+  /** Group a turn's process steps (thinking, tools, subagents) into one disclosure. */
+  private shouldGroupProcessSteps(): boolean {
+    return this.deps.plugin.settings.groupProcessSteps !== false;
+  }
+
+  /** Render process steps expanded while the turn is still streaming. */
+  private shouldExpandProcessWhileStreaming(): boolean {
+    return this.deps.plugin.settings.expandProcessWhileStreaming !== false;
+  }
+
+  /**
+   * Container that process blocks should be appended to.
+   * With grouping enabled this is the body of the current process group,
+   * creating a fresh group whenever the previous one was sealed by answer text.
+   */
+  private getProcessContainerEl(): HTMLElement | null {
+    const { state } = this.deps;
+    if (!state.currentContentEl) return null;
+    if (!this.shouldGroupProcessSteps()) return state.currentContentEl;
+
+    let group = state.currentProcessGroup;
+    if (!group || group.closed) {
+      group = createProcessGroup(state.currentContentEl, {
+        initiallyExpanded: this.shouldExpandProcessWhileStreaming(),
+      });
+      state.currentProcessGroup = group;
+      this.activeProcessGroups.push(group);
+    }
+    return group.bodyEl;
+  }
+
+  /** Seal the active group so later steps start a new one (e.g. after answer text). */
+  private sealProcessGroup(): void {
+    const { state } = this.deps;
+    if (state.currentProcessGroup) {
+      freezeProcessGroup(state.currentProcessGroup);
+      state.currentProcessGroup.closed = true;
+      state.currentProcessGroup = null;
+    }
+  }
+
+  private noteProcessStep(): void {
+    const group = this.deps.state.currentProcessGroup;
+    if (group) addProcessStep(group);
+  }
+
+  /** Collapse every process group of this turn; called when the response finishes. */
+  finalizeActiveProcessGroup(): void {
+    const { state } = this.deps;
+    const groups = this.activeProcessGroups;
+    this.activeProcessGroups = [];
+    state.currentProcessGroup = null;
+
+    if (groups.length === 0) return;
+    for (const group of groups) {
+      finalizeProcessGroup(group);
+    }
   }
 
   private getStreamingRenderOptions(content: string): RenderContentOptions | undefined {
@@ -670,7 +757,7 @@ export class StreamController {
     const pendingSpawn = state.pendingTools.get(spawnId);
     const parentEl = previousEl?.parentElement
       ?? pendingSpawn?.parentEl
-      ?? state.currentContentEl;
+      ?? this.getProcessContainerEl();
     if (!parentEl) return;
 
     this.cancelPendingToolOutputRender(spawnId);
@@ -1065,6 +1152,8 @@ export class StreamController {
     this.hideThinkingIndicator();
 
     if (!state.currentTextEl) {
+      // Answer text always renders outside the process group; later steps open a new one.
+      this.sealProcessGroup();
       state.currentTextEl = state.currentContentEl.createDiv({ cls: 'codian-text-block' });
       state.currentTextContent = '';
     }
@@ -1138,7 +1227,10 @@ export class StreamController {
     this.hideThinkingIndicator();
     if (!state.currentThinkingState) {
       this.thinkingRenderCoordinator.cancel();
-      const thinkingState = createThinkingBlock(state.currentContentEl, {
+      this.noteProcessStep();
+      const thinkingParent = this.getProcessContainerEl() ?? state.currentContentEl;
+      const thinkingState = createThinkingBlock(thinkingParent, {
+        initiallyExpanded: this.shouldExpandProcessWhileStreaming(),
         onToggle: (isExpanded) => {
           this.handleThinkingToggle(thinkingState, isExpanded);
         },
@@ -1169,7 +1261,9 @@ export class StreamController {
     }
     await this.thinkingRenderCoordinator.flush();
 
-    const durationSeconds = finalizeThinkingBlock(thinkingState);
+    const durationSeconds = finalizeThinkingBlock(thinkingState, {
+      keepExpanded: this.shouldGroupProcessSteps() && this.shouldExpandProcessWhileStreaming(),
+    });
 
     if (msg && thinkingState.content) {
       msg.contentBlocks = msg.contentBlocks || [];
@@ -1206,7 +1300,12 @@ export class StreamController {
     const { state, subagentManager } = this.deps;
     this.ensureTaskToolCall(msg, chunk.id, chunk.input, chunk.providerPayload);
 
-    const result = subagentManager.handleTaskToolUse(chunk.id, chunk.input, state.currentContentEl);
+    this.noteProcessStep();
+    const result = subagentManager.handleTaskToolUse(
+      chunk.id,
+      chunk.input,
+      this.getProcessContainerEl() ?? state.currentContentEl,
+    );
 
     switch (result.action) {
       case 'created_sync':
@@ -1227,7 +1326,10 @@ export class StreamController {
 
   /** Renders a pending Agent tool call via SubagentManager and updates message. */
   private renderPendingTaskViaManager(toolId: string, msg: ChatMessage): void {
-    const result = this.deps.subagentManager.renderPendingTask(toolId, this.deps.state.currentContentEl);
+    const result = this.deps.subagentManager.renderPendingTask(
+      toolId,
+      this.getProcessContainerEl() ?? this.deps.state.currentContentEl,
+    );
     if (!result) return;
 
     if (result.mode === 'sync') {
@@ -1246,7 +1348,7 @@ export class StreamController {
       chunk.id,
       chunk.content,
       chunk.isError || false,
-      this.deps.state.currentContentEl,
+      this.getProcessContainerEl() ?? this.deps.state.currentContentEl,
       chunk.toolUseResult
     );
     if (!result) return;
@@ -1788,6 +1890,7 @@ export class StreamController {
     const { state } = this.deps;
     if (!state.currentContentEl) return;
     this.hideThinkingIndicator();
+    this.sealProcessGroup();
     const el = state.currentContentEl.createDiv({ cls: 'codian-compact-boundary' });
     el.createSpan({ cls: 'codian-compact-boundary-label', text: 'Conversation compacted' });
   }
@@ -1932,6 +2035,8 @@ export class StreamController {
     state.currentTextEl = null;
     state.currentTextContent = '';
     state.currentThinkingState = null;
+    state.currentProcessGroup = null;
+    this.activeProcessGroups = [];
     this.deps.subagentManager.resetStreamingState();
     this.lifecycleSubagentStates.clear();
     this.lifecycleAgentIdToSpawnId.clear();
@@ -1945,6 +2050,10 @@ export class StreamController {
     this.thinkingRenderCoordinator.dispose();
     this.cancelPendingToolOutputRenders();
     this.cancelPendingScroll();
+    for (const group of this.activeProcessGroups) {
+      freezeProcessGroup(group);
+    }
+    this.activeProcessGroups = [];
   }
 }
 

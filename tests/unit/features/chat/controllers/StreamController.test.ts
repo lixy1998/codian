@@ -134,6 +134,8 @@ function createMockDeps(): StreamControllerDeps {
     plugin: {
       settings: {
         permissionMode: 'yolo',
+        // These tests assert the flat (ungrouped) render tree.
+        groupProcessSteps: false,
       },
       app: {
         vault: {

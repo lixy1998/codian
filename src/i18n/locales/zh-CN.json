@@ -355,6 +355,11 @@
       "completed": "思考了 {seconds} 秒",
       "label": "思考过程"
     },
+    "process": {
+      "running": "过程 · {count} 步 · {seconds} 秒",
+      "completed": "过程 · {count} 步 · 用时 {duration}",
+      "summary": "过程 · {count} 步"
+    },
     "suggestions": {
       "loading": "正在加载…",
       "noMatches": "无匹配项",
@@ -770,6 +775,14 @@
     "expandFileEditsByDefault": {
       "name": "默认展开文件编辑",
       "desc": "Write 和 Edit diff 首次出现时以展开状态显示。"
+    },
+    "groupProcessSteps": {
+      "name": "过程步骤归组",
+      "desc": "把一轮中的思考、工具调用、子代理收进同一个可折叠块，答案出现后自动折叠成一行。"
+    },
+    "expandProcessWhileStreaming": {
+      "name": "运行中展开过程",
+      "desc": "任务进行时保持该块展开以便观察进度，本轮结束后自动折叠。"
     },
     "chatViewPlacement": {
       "name": "Codian 打开位置",

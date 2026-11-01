@@ -936,6 +936,32 @@ export class CodianSettingTab extends PluginSettingTab {
       );
 
     new Setting(container)
+      .setName(t('settings.groupProcessSteps.name'))
+      .setDesc(t('settings.groupProcessSteps.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.groupProcessSteps ?? true)
+          .onChange(async (value) => {
+            await this.plugin.mutateSettings((settings) => {
+              settings.groupProcessSteps = value;
+            });
+          })
+      );
+
+    new Setting(container)
+      .setName(t('settings.expandProcessWhileStreaming.name'))
+      .setDesc(t('settings.expandProcessWhileStreaming.desc'))
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.expandProcessWhileStreaming ?? true)
+          .onChange(async (value) => {
+            await this.plugin.mutateSettings((settings) => {
+              settings.expandProcessWhileStreaming = value;
+            });
+          })
+      );
+
+    new Setting(container)
       .setName(t('settings.pluginRenderedFenceLanguages.name'))
       .setDesc(t('settings.pluginRenderedFenceLanguages.desc'))
       .setClass('codian-settings-textarea')
