@@ -39,15 +39,23 @@ export interface CitationGroup {
   entries: CitationEntry[];
 }
 
+/**
+ * Wall-clock start of the block, in epoch milliseconds. Filled in only when a provider transcript
+ * is replayed, so a restored process group can show how long it actually ran.
+ */
+export interface BlockTiming {
+  at?: number;
+}
+
 /** Content block for preserving streaming order in messages. */
 export type ContentBlock =
-  | { type: 'text'; content: string }
-  | { type: 'tool_use'; toolId: string }
-  | { type: 'thinking'; content: string; durationSeconds?: number }
-  | { type: 'subagent'; subagentId: string; mode?: SubagentMode }
-  | { type: 'citations'; citations: CitationGroup }
-  | { type: 'context_compacted' }
-  | { type: 'task_notification'; content: string };
+  | ({ type: 'text'; content: string } & BlockTiming)
+  | ({ type: 'tool_use'; toolId: string } & BlockTiming)
+  | ({ type: 'thinking'; content: string; durationSeconds?: number } & BlockTiming)
+  | ({ type: 'subagent'; subagentId: string; mode?: SubagentMode } & BlockTiming)
+  | ({ type: 'citations'; citations: CitationGroup } & BlockTiming)
+  | ({ type: 'context_compacted' } & BlockTiming)
+  | ({ type: 'task_notification'; content: string } & BlockTiming);
 
 /** Chat message with content, tool calls, and attachments. */
 export interface ChatMessage {

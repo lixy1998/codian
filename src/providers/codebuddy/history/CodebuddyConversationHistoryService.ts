@@ -94,7 +94,7 @@ function reasoningText(rawContent: unknown): string {
  * collapsed (`isExpanded: false`), which keeps a long transcript readable while leaving the detail
  * one click away.
  */
-function parseTranscript(raw: string): ChatMessage[] {
+export function parseTranscript(raw: string): ChatMessage[] {
   const messages: ChatMessage[] = [];
   const toolCallsByCallId = new Map<string, ToolCallInfo>();
   let current: ChatMessage | null = null;
@@ -116,8 +116,9 @@ function parseTranscript(raw: string): ChatMessage[] {
     current?.role === 'assistant' ? current : startAssistant(timestamp)
   );
 
-  const pushBlock = (message: ChatMessage, block: ContentBlock): void => {
-    message.contentBlocks = [...(message.contentBlocks ?? []), block];
+  /** Every block carries its transcript timestamp so a replayed group can report its own runtime. */
+  const pushBlock = (message: ChatMessage, block: ContentBlock, at: number): void => {
+    message.contentBlocks = [...(message.contentBlocks ?? []), { ...block, at }];
   };
 
   for (const line of raw.split('\n')) {
@@ -153,7 +154,7 @@ function parseTranscript(raw: string): ChatMessage[] {
           id: entryId ?? `codebuddy-history-${messages.length}`,
           role: 'user',
           content: text,
-          contentBlocks: [{ type: 'text', content: text }],
+          contentBlocks: [{ type: 'text', content: text, at: timestamp }],
           timestamp,
         };
         messages.push(message);
@@ -166,7 +167,7 @@ function parseTranscript(raw: string): ChatMessage[] {
           id: entryId ?? `codebuddy-history-${messages.length}`,
           role: 'assistant',
           content: text,
-          contentBlocks: [{ type: 'text', content: text }],
+          contentBlocks: [{ type: 'text', content: text, at: timestamp }],
           timestamp,
         };
         messages.push(message);
@@ -175,14 +176,14 @@ function parseTranscript(raw: string): ChatMessage[] {
       }
       target.content = text;
       if (entryId) target.id = entryId;
-      pushBlock(target, { type: 'text', content: text });
+      pushBlock(target, { type: 'text', content: text }, timestamp);
       continue;
     }
 
     if (entry.type === 'reasoning') {
       const text = reasoningText(entry.rawContent) || messageText(entry.content);
       if (!text.trim()) continue;
-      pushBlock(assistantFor(timestamp), { type: 'thinking', content: text });
+      pushBlock(assistantFor(timestamp), { type: 'thinking', content: text }, timestamp);
       continue;
     }
 
@@ -199,7 +200,7 @@ function parseTranscript(raw: string): ChatMessage[] {
         isExpanded: false,
       };
       target.toolCalls = [...(target.toolCalls ?? []), info];
-      pushBlock(target, { type: 'tool_use', toolId: callId });
+      pushBlock(target, { type: 'tool_use', toolId: callId }, timestamp);
       toolCallsByCallId.set(callId, info);
       continue;
     }

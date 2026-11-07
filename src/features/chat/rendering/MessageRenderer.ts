@@ -72,6 +72,42 @@ function runRendererAction(action: () => Promise<void>): void {
   });
 }
 
+/**
+ * Runtime of a replayed process group, measured from the first block of the run to the block that
+ * follows it (the answer text, or the first non-process block). Transcript timestamps are the only
+ * record of a finished turn's timing, so a group without them falls back to the caller's estimate.
+ */
+function replayedGroupSeconds(
+  blocks: readonly ContentBlock[],
+  startIndex: number,
+  endIndex: number,
+): number | undefined {
+  const startAt = blocks[startIndex]?.at;
+  if (typeof startAt !== 'number') return undefined;
+  const endAt = blocks[endIndex]?.at ?? blocks[endIndex - 1]?.at;
+  if (typeof endAt !== 'number' || endAt <= startAt) return undefined;
+  const seconds = Math.round((endAt - startAt) / 1000);
+  return seconds > 0 ? seconds : undefined;
+}
+
+/** Number of contiguous process runs the renderer will group, matching the render loop below. */
+function countProcessRuns(
+  blocks: readonly ContentBlock[],
+  isProcessBlock: (block: ContentBlock) => boolean,
+): number {
+  let runs = 0;
+  let insideRun = false;
+  for (const block of blocks) {
+    if (isProcessBlock(block)) {
+      if (!insideRun) runs += 1;
+      insideRun = true;
+    } else {
+      insideRun = false;
+    }
+  }
+  return runs;
+}
+
 export class MessageRenderer {
   private app: App;
   private plugin: FeatureHost;
@@ -527,6 +563,9 @@ export class MessageRenderer {
       };
 
       const grouping = this.shouldGroupProcessSteps();
+      // A single-group message can borrow the turn's own duration when the transcript carries no
+      // timestamps; with several groups that number belongs to none of them.
+      const singleProcessRun = grouping && countProcessRuns(blocks, isProcessBlock) === 1;
 
       for (let index = 0; index < blocks.length; index += 1) {
         const block = blocks[index];
@@ -554,7 +593,12 @@ export class MessageRenderer {
               for (const runBlock of run) renderBlock(bodyEl, runBlock);
             },
             run.length,
-            thinkingSeconds > 0 ? thinkingSeconds : undefined,
+            replayedGroupSeconds(blocks, index, cursor)
+              ?? (thinkingSeconds > 0
+                ? thinkingSeconds
+                : singleProcessRun
+                  ? msg.durationSeconds
+                  : undefined),
           );
           index = cursor - 1;
           continue;

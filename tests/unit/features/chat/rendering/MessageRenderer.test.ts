@@ -17,6 +17,8 @@ import { renderStoredAsyncSubagent, renderStoredSubagent } from '@/features/chat
 import { renderStoredThinkingBlock } from '@/features/chat/rendering/ThinkingBlockRenderer';
 import { renderStoredToolCall } from '@/features/chat/rendering/ToolCallRenderer';
 import { renderStoredWriteEdit } from '@/features/chat/rendering/WriteEditRenderer';
+import { t } from '@/i18n/i18n';
+import { formatDurationMmSs } from '@/utils/date';
 
 jest.mock('@/features/chat/rendering/SubagentRenderer', () => ({
   renderStoredAsyncSubagent: jest.fn().mockReturnValue({ wrapperEl: {}, cleanup: jest.fn() }),
@@ -2429,6 +2431,52 @@ describe('MessageRenderer', () => {
         'thought without duration',
         undefined,
         expect.any(Function)
+      );
+    });
+  });
+
+  describe('replayed process group timing', () => {
+    it('reports the runtime measured from the transcript timestamps', () => {
+      const messagesEl = createMockEl();
+      const { renderer } = createRenderer(messagesEl);
+
+      renderer.renderStoredMessage({
+        id: 'replayed-turn',
+        role: 'assistant',
+        content: 'done',
+        timestamp: 1_000,
+        contentBlocks: [
+          { type: 'thinking', content: 'first', at: 1_000 },
+          { type: 'thinking', content: 'second', at: 4_000 },
+          { type: 'text', content: 'done', at: 9_000 },
+        ],
+      });
+
+      const label = messagesEl.querySelector('.codian-process-label');
+      expect(label?.textContent).toBe(
+        t('chat.process.completed', { count: 2, duration: formatDurationMmSs(8) }),
+      );
+    });
+
+    it('falls back to the turn duration when the transcript has no timestamps', () => {
+      const messagesEl = createMockEl();
+      const { renderer } = createRenderer(messagesEl);
+
+      renderer.renderStoredMessage({
+        id: 'legacy-turn',
+        role: 'assistant',
+        content: 'done',
+        timestamp: 1_000,
+        durationSeconds: 42,
+        contentBlocks: [
+          { type: 'thinking', content: 'first' },
+          { type: 'text', content: 'done' },
+        ],
+      });
+
+      const label = messagesEl.querySelector('.codian-process-label');
+      expect(label?.textContent).toBe(
+        t('chat.process.completed', { count: 1, duration: formatDurationMmSs(42) }),
       );
     });
   });
