@@ -201,6 +201,19 @@
       "toolFailed": "{tool} · échec",
       "toolBlocked": "{tool} · bloqué"
     },
+    "process": {
+      "running": "Processus · {count} étapes · {seconds} s",
+      "completed": "Processus · {count} étapes · {duration}",
+      "summary": "Processus · {count} étapes"
+    },
+    "queue": {
+      "queued": "En file d'attente",
+      "steering": "Insertion",
+      "steerNow": "Envoyer maintenant",
+      "edit": "Modifier le message en file d'attente",
+      "discard": "Supprimer le message en file d'attente",
+      "steerFailed": "Impossible d'insérer le message dans le tour en cours. Il reste en file d'attente."
+    },
     "composer": {
       "placeholder": "Demandez des modifications, mentionnez des fichiers avec @, lancez des /commandes",
       "message": "Message",
@@ -528,6 +541,20 @@
     "requireCommandOrControlEnterToSend": {
       "name": "Exiger Command/Ctrl+Entrée pour envoyer",
       "desc": "Lorsque cette option est activée, Entrée insère une nouvelle ligne. Command+Entrée envoie sur macOS ; Ctrl+Entrée envoie sur Windows et Linux."
+    },
+    "queuedMessageSendMode": {
+      "name": "Envoi des messages en file d'attente",
+      "desc": "Détermine comment un message envoyé pendant l'exécution de l'agent est traité. « File d'attente » attend la fin du tour en cours ; « Envoyer maintenant » l'insère dans le tour en cours. Maintenir Alt lors de l'envoi remet le message en file d'attente.",
+      "queue": "File d'attente",
+      "steer": "Envoyer maintenant"
+    },
+    "groupProcessSteps": {
+      "name": "Regrouper les étapes du processus",
+      "desc": "Rassembler la réflexion, les appels d'outils et les sous-agents d'un tour dans un bloc repliable qui se ferme dès que la réponse est prête."
+    },
+    "expandProcessWhileStreaming": {
+      "name": "Déplier le processus pendant l'exécution",
+      "desc": "Garder ce bloc déplié pendant le tour pour suivre le travail, puis le replier à la fin."
     },
     "hotkeys": "Raccourcis clavier",
     "inlineEditHotkey": {

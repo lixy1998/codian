@@ -201,6 +201,14 @@
       "toolFailed": "{tool} · failed",
       "toolBlocked": "{tool} · blocked"
     },
+    "queue": {
+      "queued": "Queued",
+      "steering": "Steering",
+      "steerNow": "Send now",
+      "edit": "Edit queued message",
+      "discard": "Discard queued message",
+      "steerFailed": "Could not send the message into the running turn. It stays queued."
+    },
     "composer": {
       "placeholder": "Ask to make changes, @mention files, run /commands",
       "message": "Message",
@@ -533,6 +541,12 @@
     "requireCommandOrControlEnterToSend": {
       "name": "Require Command/Ctrl+Enter to send",
       "desc": "When enabled, Enter inserts a newline. Command+Enter sends on macOS; Ctrl+Enter sends on Windows and Linux."
+    },
+    "queuedMessageSendMode": {
+      "name": "Queued message delivery",
+      "desc": "How a message sent while the agent is running is delivered. Queue waits for the current turn to finish; Send now injects it into the running turn. Hold Alt while sending to queue one message anyway.",
+      "queue": "Queue",
+      "steer": "Send now"
     },
     "hotkeys": "Hotkeys",
     "inlineEditHotkey": {

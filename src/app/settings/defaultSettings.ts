@@ -32,6 +32,7 @@ export const DEFAULT_CODIAN_SETTINGS: CodianSettings = {
     focusInputKey: 'i',
   },
   requireCommandOrControlEnterToSend: false,
+  queuedMessageSendMode: 'queue',
   enableLivePreviewComposer: true,
 
   providerConfigs: getBuiltInProviderDefaultConfigs(),

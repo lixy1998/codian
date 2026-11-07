@@ -137,6 +137,8 @@ export interface SendMessageOptions {
   images?: ChatMessage['images'];
   turnRequestOverride?: ChatTurnRequest;
   origin?: 'user' | 'session-message';
+  /** Force queueing even when the settings would inject the message into the running turn. */
+  queueOnly?: boolean;
   assertBeforeHandoff?: () => void;
   onUnsent?: (reason: SessionMessageUnsentReason) => void;
   sessionMessageMetadata?: {
@@ -411,6 +413,11 @@ export class InputController {
         fileContextManager?.consumeDroppedReferences?.();
       }
       this.updateQueueIndicator();
+      // "Send now" injects the message into the running turn. It is queued first, so a provider
+      // that refuses the steer simply keeps it waiting in the queue.
+      if (this.shouldSteerOnSend(options)) {
+        void this.steerQueuedMessage();
+      }
       return;
     }
 
@@ -818,7 +825,7 @@ export class InputController {
       const isPendingSteerOnly = !state.queuedMessage && !!this.pendingSteerMessage;
       indicatorEl.createSpan({
         cls: 'codian-queue-indicator-text',
-        text: `${isPendingSteerOnly ? '⌙ Steering: ' : '⌙ Queued: '}${this.getQueuedMessageDisplay(visibleQueuedMessage)}`,
+        text: `⌙ ${t(isPendingSteerOnly ? 'chat.queue.steering' : 'chat.queue.queued')}: ${this.getQueuedMessageDisplay(visibleQueuedMessage)}`,
       });
 
       if (state.queuedMessage) {
@@ -827,7 +834,7 @@ export class InputController {
         if (this.canSteerQueuedMessage()) {
           const steerButton = actionsEl.createEl('button', {
             cls: 'codian-queue-indicator-action',
-            text: this.steerInFlight ? 'Steering...' : 'Steer Now',
+            text: t(this.steerInFlight ? 'chat.queue.steering' : 'chat.queue.steerNow'),
           });
           steerButton.setAttribute('type', 'button');
           if (this.steerInFlight) {
@@ -843,7 +850,7 @@ export class InputController {
         const editButton = this.createQueueIconButton(
           actionsEl,
           'pencil',
-          'Edit queued message',
+          t('chat.queue.edit'),
         );
         editButton.addEventListener('click', (event) => {
           event.stopPropagation();
@@ -853,7 +860,7 @@ export class InputController {
         const discardButton = this.createQueueIconButton(
           actionsEl,
           'trash-2',
-          'Discard queued message',
+          t('chat.queue.discard'),
         );
         discardButton.addEventListener('click', (event) => {
           event.stopPropagation();
@@ -1091,6 +1098,22 @@ export class InputController {
       && typeof agentService?.steer === 'function';
   }
 
+  /**
+   * Whether a message submitted during a running turn is injected instead of waiting for the turn
+   * to finish. Pending inline interactions own the turn, so those always queue.
+   */
+  private shouldSteerOnSend(options?: SendMessageOptions): boolean {
+    if (options?.queueOnly === true) return false;
+    // Session messages keep their own admission order; queueing preserves it.
+    if (options?.origin === 'session-message') return false;
+    if ((this.deps.plugin.settings.queuedMessageSendMode ?? 'queue') !== 'steer') return false;
+    return this.canSteerQueuedMessage()
+      && this.pendingAskInline === null
+      && this.pendingApprovalInline === null
+      && this.pendingPlanApproval === null
+      && this.pendingExitPlanModeInline === null;
+  }
+
   private cloneQueuedMessage(message: QueuedMessage): QueuedMessage {
     return {
       ...message,
@@ -1235,7 +1258,7 @@ export class InputController {
         this.removePendingProviderUserMessage(expectedProviderMessage);
       }
       this.restoreQueuedMessageAfterSteerFailure(queuedMessage);
-      new Notice('Failed to steer the queued message. It is still available.');
+      new Notice(t('chat.queue.steerFailed'));
     }
   }
 

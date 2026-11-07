@@ -201,6 +201,19 @@
       "toolFailed": "{tool} · falló",
       "toolBlocked": "{tool} · bloqueado"
     },
+    "process": {
+      "running": "Proceso · {count} pasos · {seconds} s",
+      "completed": "Proceso · {count} pasos · {duration}",
+      "summary": "Proceso · {count} pasos"
+    },
+    "queue": {
+      "queued": "En cola",
+      "steering": "Insertando",
+      "steerNow": "Enviar ahora",
+      "edit": "Editar mensaje en cola",
+      "discard": "Descartar mensaje en cola",
+      "steerFailed": "No se pudo insertar el mensaje en el turno en curso. Sigue en cola."
+    },
     "composer": {
       "placeholder": "Pide cambios, menciona archivos con @, ejecuta /comandos",
       "message": "Mensaje",
@@ -528,6 +541,20 @@
     "requireCommandOrControlEnterToSend": {
       "name": "Requerir Command/Ctrl+Enter para enviar",
       "desc": "Cuando está activado, Enter inserta un salto de línea. Command+Enter envía en macOS; Ctrl+Enter envía en Windows y Linux."
+    },
+    "queuedMessageSendMode": {
+      "name": "Entrega de mensajes en cola",
+      "desc": "Cómo se entrega un mensaje enviado mientras el agente está en ejecución. «Cola» espera a que termine el turno actual; «Enviar ahora» lo inserta en el turno en curso. Mantén Alt al enviar para encolarlo una sola vez.",
+      "queue": "Cola",
+      "steer": "Enviar ahora"
+    },
+    "groupProcessSteps": {
+      "name": "Agrupar pasos del proceso",
+      "desc": "Reúne el razonamiento, las llamadas a herramientas y los subagentes de un turno en un bloque plegable que se contrae cuando la respuesta está lista."
+    },
+    "expandProcessWhileStreaming": {
+      "name": "Expandir el proceso durante la ejecución",
+      "desc": "Mantén el bloque expandido mientras el turno se ejecuta para ver el trabajo y colapsarlo al terminar."
     },
     "hotkeys": "Atajos de teclado",
     "inlineEditHotkey": {

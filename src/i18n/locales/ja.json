@@ -201,6 +201,19 @@
       "toolFailed": "{tool} · 失敗",
       "toolBlocked": "{tool} · ブロック"
     },
+    "process": {
+      "running": "プロセス · {count} ステップ · {seconds} 秒",
+      "completed": "プロセス · {count} ステップ · {duration}",
+      "summary": "プロセス · {count} ステップ"
+    },
+    "queue": {
+      "queued": "キュー",
+      "steering": "挿入中",
+      "steerNow": "今すぐ送信",
+      "edit": "キューのメッセージを編集",
+      "discard": "キューのメッセージを破棄",
+      "steerFailed": "実行中のターンに挿入できませんでした。メッセージはキューのまま残ります。"
+    },
     "composer": {
       "placeholder": "変更を依頼、@でファイルを指定、/コマンドを実行",
       "message": "メッセージ",
@@ -528,6 +541,20 @@
     "requireCommandOrControlEnterToSend": {
       "name": "送信に Command/Ctrl+Enter を必須にする",
       "desc": "有効にすると、Enter は改行を挿入します。macOS では Command+Enter、Windows と Linux では Ctrl+Enter で送信します。"
+    },
+    "queuedMessageSendMode": {
+      "name": "キューされたメッセージの送信方法",
+      "desc": "エージェント実行中に送信したメッセージの扱いです。「キュー」は現在のターンが終わるまで待機し、「今すぐ送信」は実行中のターンに直接挿入します。送信時に Alt を押すとその 1 回だけキューに戻せます。",
+      "queue": "キュー",
+      "steer": "今すぐ送信"
+    },
+    "groupProcessSteps": {
+      "name": "プロセス手順をまとめる",
+      "desc": "1 ターンの思考・ツール呼び出し・サブエージェントを 1 つの折りたたみブロックにまとめ、回答ができると自動で折りたたみます。"
+    },
+    "expandProcessWhileStreaming": {
+      "name": "実行中はプロセスを展開",
+      "desc": "ターンの実行中はブロックを展開したままにして進行状況を確認できるようにし、ターン終了時に折りたたみます。"
     },
     "hotkeys": "ホットキー",
     "inlineEditHotkey": {

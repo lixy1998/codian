@@ -201,6 +201,14 @@
       "toolFailed": "{tool} · 失败",
       "toolBlocked": "{tool} · 已阻止"
     },
+    "queue": {
+      "queued": "排队",
+      "steering": "正在插入",
+      "steerNow": "立即发送",
+      "edit": "编辑排队消息",
+      "discard": "放弃排队消息",
+      "steerFailed": "未能插入当前对话，消息已留在队列中。"
+    },
     "composer": {
       "placeholder": "请求修改、@提及文件、运行 /命令",
       "message": "消息",
@@ -533,6 +541,12 @@
     "requireCommandOrControlEnterToSend": {
       "name": "需要 Command/Ctrl+Enter 发送",
       "desc": "启用后，Enter 会插入换行。macOS 使用 Command+Enter 发送；Windows 和 Linux 使用 Ctrl+Enter 发送。"
+    },
+    "queuedMessageSendMode": {
+      "name": "队列消息发送方式",
+      "desc": "Agent 运行期间发送的消息如何投递。「排队」等当前这一轮回答结束后再发送；「立即发送」直接插入正在进行的一轮对话。发送时按住 Alt 可临时改回排队。",
+      "queue": "排队",
+      "steer": "立即发送"
     },
     "hotkeys": "快捷键",
     "inlineEditHotkey": {

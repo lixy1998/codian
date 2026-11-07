@@ -87,6 +87,15 @@ export const TAB_LIMIT_BEHAVIORS = [
 /** How Codian handles opening conversations or new tabs when the tab limit is reached. */
 export type TabLimitBehavior = typeof TAB_LIMIT_BEHAVIORS[number];
 
+export const QUEUED_MESSAGE_SEND_MODES = [
+  /** Hold the message until the running turn finishes. */
+  'queue',
+  /** Inject the message into the running turn when the provider supports steering. */
+  'steer',
+] as const;
+
+export type QueuedMessageSendMode = typeof QUEUED_MESSAGE_SEND_MODES[number];
+
 /** Result from instruction refinement agent query. */
 export interface InstructionRefineResult {
   success: boolean;
@@ -145,6 +154,11 @@ export interface CodianSettings {
   // UI settings
   keyboardNavigation: KeyboardNavigationSettings;
   requireCommandOrControlEnterToSend: boolean;
+  /**
+   * Delivery of input submitted while a turn is running. `steer` falls back to queueing when the
+   * active provider cannot steer or the active turn cannot accept a steer.
+   */
+  queuedMessageSendMode: QueuedMessageSendMode;
   enableLivePreviewComposer?: boolean;
 
   // Provider-owned settings

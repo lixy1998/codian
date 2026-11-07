@@ -306,8 +306,18 @@ function hasPlatformSendModifier(e: KeyboardEvent): boolean {
   return e.ctrlKey === true && !e.metaKey && !e.altKey;
 }
 
+/** The send shortcut with Alt added: same gesture, but the message waits in the queue. */
+function hasPlatformQueueModifier(e: KeyboardEvent): boolean {
+  if (Platform.isMacOS) {
+    return e.metaKey === true && e.altKey === true && !e.ctrlKey;
+  }
+
+  return e.ctrlKey === true && e.altKey === true && !e.metaKey;
+}
+
 function shouldSendMessageFromExplicitEnterShortcut(e: KeyboardEvent): boolean {
-  return isEnterWithoutShiftOrComposition(e) && hasPlatformSendModifier(e);
+  return isEnterWithoutShiftOrComposition(e)
+    && (hasPlatformSendModifier(e) || hasPlatformQueueModifier(e));
 }
 
 function shouldSendMessageFromEnterKey(
@@ -319,7 +329,7 @@ function shouldSendMessageFromEnterKey(
   }
 
   if (settings.requireCommandOrControlEnterToSend === true) {
-    return hasPlatformSendModifier(e);
+    return hasPlatformSendModifier(e) || hasPlatformQueueModifier(e);
   }
 
   return true;
@@ -347,7 +357,8 @@ function sendTabInputMessage(
   }
 
   e.preventDefault();
-  void inputController.sendMessage();
+  // Alt held on the send gesture always queues, whatever the delivery setting says.
+  void inputController.sendMessage({ queueOnly: e.altKey === true });
   return true;
 }
 

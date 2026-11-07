@@ -201,6 +201,19 @@
       "toolFailed": "{tool} · falhou",
       "toolBlocked": "{tool} · bloqueado"
     },
+    "process": {
+      "running": "Processo · {count} etapas · {seconds}s",
+      "completed": "Processo · {count} etapas · {duration}",
+      "summary": "Processo · {count} etapas"
+    },
+    "queue": {
+      "queued": "Na fila",
+      "steering": "Inserindo",
+      "steerNow": "Enviar agora",
+      "edit": "Editar mensagem na fila",
+      "discard": "Descartar mensagem na fila",
+      "steerFailed": "Não foi possível inserir a mensagem no turno em andamento. Ela continua na fila."
+    },
     "composer": {
       "placeholder": "Peça alterações, mencione arquivos com @, execute /comandos",
       "message": "Mensagem",
@@ -528,6 +541,20 @@
     "requireCommandOrControlEnterToSend": {
       "name": "Exigir Command/Ctrl+Enter para enviar",
       "desc": "Quando ativado, Enter insere uma quebra de linha. Command+Enter envia no macOS; Ctrl+Enter envia no Windows e Linux."
+    },
+    "queuedMessageSendMode": {
+      "name": "Entrega de mensagens na fila",
+      "desc": "Como uma mensagem enviada enquanto o agente está em execução é entregue. \"Fila\" aguarda o fim do turno atual; \"Enviar agora\" a insere no turno em andamento. Segure Alt ao enviar para colocar a mensagem na fila.",
+      "queue": "Fila",
+      "steer": "Enviar agora"
+    },
+    "groupProcessSteps": {
+      "name": "Agrupar etapas do processo",
+      "desc": "Reúne o raciocínio, as chamadas de ferramentas e os subagentes de um turno em um bloco recolhível que se fecha quando a resposta fica pronta."
+    },
+    "expandProcessWhileStreaming": {
+      "name": "Expandir o processo durante a execução",
+      "desc": "Mantém o bloco expandido enquanto o turno é executado para acompanhar o trabalho e o recolhe ao final."
     },
     "hotkeys": "Atalhos",
     "inlineEditHotkey": {

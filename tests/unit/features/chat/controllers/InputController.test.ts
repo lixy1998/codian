@@ -4,6 +4,7 @@ import { Notice } from 'obsidian';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { InputController, type InputControllerDeps } from '@/features/chat/controllers/InputController';
 import { ChatState } from '@/features/chat/state/ChatState';
+import { t } from '@/i18n/i18n';
 import { encodeClaudeTurn } from '@/providers/claude/prompt/ClaudeTurnEncoder';
 import { ResumeSessionDropdown } from '@/shared/components/ResumeSessionDropdown';
 
@@ -437,6 +438,54 @@ describe('InputController - Message Queue', () => {
       expect(fileContextManager.consumeDroppedReferences).toHaveBeenCalled();
     });
 
+    it('should steer into the running turn when the delivery setting is send now', async () => {
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.getCapabilities.mockReturnValue({
+        providerId: 'claude',
+        supportsPersistentRuntime: true,
+        supportsNativeHistory: true,
+        supportsPlanMode: true,
+        supportsRewind: true,
+        supportsFork: true,
+        supportsProviderCommands: true,
+        supportsTurnSteer: true,
+        reasoningControl: 'effort',
+      });
+      (deps.plugin as any).settings.queuedMessageSendMode = 'steer';
+      deps.state.isStreaming = true;
+      inputEl.value = 'steer this';
+
+      await controller.sendMessage();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockAgentService.steer).toHaveBeenCalledTimes(1);
+      expect(deps.state.queuedMessage).toBeNull();
+    });
+
+    it('should keep the message queued when a single send asks for queueing', async () => {
+      const mockAgentService = (deps as any).mockAgentService;
+      mockAgentService.getCapabilities.mockReturnValue({
+        providerId: 'claude',
+        supportsPersistentRuntime: true,
+        supportsNativeHistory: true,
+        supportsPlanMode: true,
+        supportsRewind: true,
+        supportsFork: true,
+        supportsProviderCommands: true,
+        supportsTurnSteer: true,
+        reasoningControl: 'effort',
+      });
+      (deps.plugin as any).settings.queuedMessageSendMode = 'steer';
+      deps.state.isStreaming = true;
+      inputEl.value = 'hold this back';
+
+      await controller.sendMessage({ queueOnly: true });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(mockAgentService.steer).not.toHaveBeenCalled();
+      expect(deps.state.queuedMessage).toMatchObject({ content: 'hold this back' });
+    });
+
     it('should queue message with images when streaming', async () => {
       deps.state.isStreaming = true;
       inputEl.value = 'queued with images';
@@ -659,7 +708,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      expect(queueIndicatorEl.querySelector('.codian-queue-indicator-action')?.textContent).toBe('Steer Now');
+      expect(queueIndicatorEl.querySelector('.codian-queue-indicator-action')?.textContent).toBe(t('chat.queue.steerNow'));
     });
 
     it('should steer the queued Codex message when the action is clicked', async () => {
@@ -782,9 +831,7 @@ describe('InputController - Message Queue', () => {
         browserContext: null,
         canvasContext: null,
       });
-      expect(mockNotice).toHaveBeenCalledWith(
-        'Failed to steer the queued message. It is still available.',
-      );
+      expect(mockNotice).toHaveBeenCalledWith(t('chat.queue.steerFailed'));
     });
 
     it('should not mark the current note as sent when steering is rejected', async () => {

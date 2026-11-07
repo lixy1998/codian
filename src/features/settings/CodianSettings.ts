@@ -16,7 +16,7 @@ import type {
 import type { AgentSkillListResult } from '../../core/skills/AgentSkill';
 import { AgentSkillRepository } from '../../core/skills/AgentSkillRepository';
 import { DiscoveredAgentSkillRepository } from '../../core/skills/DiscoveredAgentSkillRepository';
-import type { ChatNavigationMode, ChatViewPlacement, TabLimitBehavior } from '../../core/types/settings';
+import type { ChatNavigationMode, ChatViewPlacement, QueuedMessageSendMode, TabLimitBehavior } from '../../core/types/settings';
 import { getAvailableLocales, getLocaleDisplayName, t } from '../../i18n/i18n';
 import { syncLocaleWithObsidian } from '../../i18n/obsidianLocale';
 import type { TranslationKey } from '../../i18n/types';
@@ -1131,6 +1131,22 @@ export class CodianSettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             await this.plugin.mutateSettings((settings) => {
               settings.requireCommandOrControlEnterToSend = value;
+            });
+          });
+      });
+
+    new Setting(container)
+      .setName(t('settings.queuedMessageSendMode.name'))
+      .setDesc(t('settings.queuedMessageSendMode.desc'))
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOption('queue', t('settings.queuedMessageSendMode.queue'))
+          .addOption('steer', t('settings.queuedMessageSendMode.steer'))
+          .setValue(this.plugin.settings.queuedMessageSendMode ?? 'queue')
+          .onChange(async (value) => {
+            const queuedMessageSendMode = value as QueuedMessageSendMode;
+            await this.plugin.mutateSettings((settings) => {
+              settings.queuedMessageSendMode = queuedMessageSendMode;
             });
           });
       });

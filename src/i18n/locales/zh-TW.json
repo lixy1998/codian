@@ -201,6 +201,19 @@
       "toolFailed": "{tool} · 失敗",
       "toolBlocked": "{tool} · 已封鎖"
     },
+    "process": {
+      "running": "過程 · {count} 步 · {seconds} 秒",
+      "completed": "過程 · {count} 步 · 耗時 {duration}",
+      "summary": "過程 · {count} 步"
+    },
+    "queue": {
+      "queued": "佇列",
+      "steering": "正在插入",
+      "steerNow": "立即傳送",
+      "edit": "編輯佇列訊息",
+      "discard": "捨棄佇列訊息",
+      "steerFailed": "未能插入目前對話，訊息已留在佇列中。"
+    },
     "composer": {
       "placeholder": "請求修改、@提及檔案、執行 /命令",
       "message": "訊息",
@@ -528,6 +541,20 @@
     "requireCommandOrControlEnterToSend": {
       "name": "需要 Command/Ctrl+Enter 才能傳送",
       "desc": "啟用後，Enter 會插入換行。macOS 使用 Command+Enter 傳送；Windows 和 Linux 使用 Ctrl+Enter 傳送。"
+    },
+    "queuedMessageSendMode": {
+      "name": "佇列訊息傳送方式",
+      "desc": "Agent 執行期間傳送的訊息如何投遞。「佇列」等目前這一輪回答結束後再傳送；「立即傳送」直接插入正在進行的一輪對話。傳送時按住 Alt 可臨時改回佇列。",
+      "queue": "佇列",
+      "steer": "立即傳送"
+    },
+    "groupProcessSteps": {
+      "name": "過程步驟歸組",
+      "desc": "把一輪中的思考、工具呼叫、子代理收進同一個可摺疊區塊，答案出現後自動摺疊成一行。"
+    },
+    "expandProcessWhileStreaming": {
+      "name": "執行中展開過程",
+      "desc": "任務進行時保持該區塊展開以便觀察進度，本輪結束後自動摺疊。"
     },
     "hotkeys": "快捷鍵",
     "inlineEditHotkey": {

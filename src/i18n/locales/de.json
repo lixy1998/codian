@@ -201,6 +201,19 @@
       "toolFailed": "{tool} · fehlgeschlagen",
       "toolBlocked": "{tool} · blockiert"
     },
+    "process": {
+      "running": "Prozess · {count} Schritte · {seconds} s",
+      "completed": "Prozess · {count} Schritte · {duration}",
+      "summary": "Prozess · {count} Schritte"
+    },
+    "queue": {
+      "queued": "Warteschlange",
+      "steering": "Wird eingefügt",
+      "steerNow": "Sofort senden",
+      "edit": "Nachricht in der Warteschlange bearbeiten",
+      "discard": "Nachricht in der Warteschlange verwerfen",
+      "steerFailed": "Die Nachricht konnte nicht in den laufenden Turn eingefügt werden. Sie bleibt in der Warteschlange."
+    },
     "composer": {
       "placeholder": "Änderungen anfragen, Dateien mit @ erwähnen, /Befehle ausführen",
       "message": "Nachricht",
@@ -528,6 +541,20 @@
     "requireCommandOrControlEnterToSend": {
       "name": "Command/Ctrl+Enter zum Senden erfordern",
       "desc": "Wenn aktiviert, fügt Enter einen Zeilenumbruch ein. Command+Enter sendet unter macOS; Ctrl+Enter sendet unter Windows und Linux."
+    },
+    "queuedMessageSendMode": {
+      "name": "Zustellung von Warteschlangen-Nachrichten",
+      "desc": "Legt fest, wie eine Nachricht zugestellt wird, die während eines laufenden Agent-Turns gesendet wird. „Warteschlange“ wartet auf das Ende des aktuellen Turns; „Sofort senden“ fügt sie in den laufenden Turn ein. Alt beim Senden hält eine Nachricht in der Warteschlange.",
+      "queue": "Warteschlange",
+      "steer": "Sofort senden"
+    },
+    "groupProcessSteps": {
+      "name": "Prozessschritte gruppieren",
+      "desc": "Denken, Tool-Aufrufe und Subagenten eines Turns in einem einklappbaren Block sammeln, der sich schließt, sobald die Antwort fertig ist."
+    },
+    "expandProcessWhileStreaming": {
+      "name": "Prozess während der Ausführung ausklappen",
+      "desc": "Den Block während des laufenden Turns ausgeklappt lassen, um die Arbeit zu beobachten, und am Ende einklappen."
     },
     "hotkeys": "Tastenkürzel",
     "inlineEditHotkey": {
