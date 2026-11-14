@@ -143,14 +143,44 @@ export default class CodianPlugin extends Plugin {
   private sessionMetadataLoadTimer: number | null = null;
   private remainingSessionMetadataLoad: Promise<void> | null = null;
   private isUnloading = false;
+  private settingsReady: Promise<void> | null = null;
+
+  /**
+   * Resolves once `loadSettings()` has populated `this.settings`, `this.storage`
+   * and `this.conversationRepository`. `onload` no longer awaits the settings
+   * load (see the comment there), so every entry point that touches settings
+   * must gate on this first.
+   */
+  private async whenSettingsReady(): Promise<void> {
+    if (this.settingsReady) {
+      await this.settingsReady;
+    }
+    if (!this.settings) {
+      throw new Error('Codian settings are not initialized yet.');
+    }
+  }
 
   async onload() {
     StartupProfiler.startOnload();
     try {
-      await StartupProfiler.runAsync(
+      // Deliberately NOT awaited. loadSettings() performs real vault I/O: the
+      // data.json read, a recursive scan of the legacy .codian storage, the
+      // restored-session metadata reads and possibly metadata writes. Awaiting
+      // it yields to the macrotask queue *before* Obsidian clears its per-plugin
+      // 3s hang timer, so the startup screen reports "Plugin Codian is taking
+      // long to load" even though the measured work is under 100ms. Keeping
+      // onload synchronous lets Obsidian clear that timer in the same microtask
+      // turn that resolves the plugin load.
+      // Anything that reads `this.settings` must go through whenSettingsReady().
+      this.settingsReady = StartupProfiler.runAsync(
         'settings-load',
         () => this.loadSettings({ deferNonRestoredSessionMetadata: true }),
-      );
+      ).then(() => {
+        this.addSettingTab(new CodianSettingTab(this.app, this));
+        this.scheduleRemainingSessionMetadataLoad();
+      }).catch((error: unknown) => {
+        console.error('[Codian] settings initialization failed', error);
+      });
       // Provider workspace services are initialized lazily on first use.
 
       // Let the Page preview core plugin handle hovering over links in messages.
@@ -288,14 +318,12 @@ export default class CodianPlugin extends Plugin {
         },
       });
 
-      this.addSettingTab(new CodianSettingTab(this.app, this));
       // Started early so the first provider launch rarely waits for the shell.
       if (typeof this.app.workspace.onLayoutReady === 'function') {
         this.app.workspace.onLayoutReady(() => { void resolveLoginShellPath(); });
       } else {
         void resolveLoginShellPath();
       }
-      this.scheduleRemainingSessionMetadataLoad();
     } finally {
       StartupProfiler.finishOnload();
     }
@@ -327,6 +355,7 @@ export default class CodianPlugin extends Plugin {
   }
 
   async activateView() {
+    await this.whenSettingsReady();
     const { workspace } = this.app;
     let leaf = workspace.getLeavesOfType(VIEW_TYPE_CODIAN)[0];
 
@@ -1331,7 +1360,7 @@ export default class CodianPlugin extends Plugin {
   }
 
   private getMaxTabsLimit(): number {
-    const maxTabs = this.settings.maxTabs ?? 3;
+    const maxTabs = this.settings?.maxTabs ?? 3;
     return Math.max(3, Math.min(10, maxTabs));
   }
 
