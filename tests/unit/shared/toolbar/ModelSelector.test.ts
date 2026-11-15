@@ -47,7 +47,18 @@ describe('ModelSelector', () => {
     const selector = new ModelSelector(mockParent, callbacks);
     const btn = mockParent.querySelector('.codian-model-btn');
     expect(btn).not.toBeNull();
-    expect(btn?.querySelector('.codian-model-label')?.textContent).toBe('Claude 3.5 Haiku (medium)');
+    expect(btn?.querySelector('.codian-model-label')?.textContent).toBe('Claude 3.5 Haiku');
+
+    selector.destroy();
+  });
+
+  it('does not nest reasoning effort options in the model dropdown', () => {
+    const selector = new ModelSelector(mockParent, callbacks);
+    selector.open();
+
+    const dropdown = mockParent.querySelector('.codian-model-dropdown') as HTMLElement;
+    expect(dropdown.querySelector('.codian-model-effort-options')).toBeNull();
+    expect(dropdown.querySelector('.codian-model-effort-option')).toBeNull();
 
     selector.destroy();
   });

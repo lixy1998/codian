@@ -46,18 +46,18 @@ describe('ThinkingSelector', () => {
     expect(container?.classList.contains('codian-hidden')).toBe(false);
 
     const current = mockParent.querySelector('.codian-thinking-current');
-    expect(current?.textContent).toBe('Medium');
+    expect(current?.textContent).toBe('中');
 
     selector.destroy();
   });
 
   it('opens options dropdown and selects effort level', () => {
     const selector = new ThinkingSelector(mockParent, callbacks);
-    const current = mockParent.querySelector('.codian-thinking-current') as HTMLElement;
+    const trigger = mockParent.querySelector('.codian-thinking-trigger') as HTMLElement;
     const optionsEl = mockParent.querySelector('.codian-thinking-options') as HTMLElement;
 
     expect(selector.isOpen()).toBe(false);
-    current.click();
+    trigger.click();
     expect(selector.isOpen()).toBe(true);
     expect(optionsEl.classList.contains('visible')).toBe(true);
 
@@ -65,7 +65,9 @@ describe('ThinkingSelector', () => {
     expect(gears.length).toBeGreaterThan(1);
 
     // Click Low
-    const lowGear = Array.from(gears).find(g => g.textContent === 'Low') as HTMLElement;
+    const lowGear = Array.from(gears).find(g =>
+      g.querySelector('.codian-thinking-gear-label')?.textContent === '低'
+    ) as HTMLElement;
     expect(lowGear).toBeDefined();
     lowGear.click();
 

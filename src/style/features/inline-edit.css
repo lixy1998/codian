@@ -100,14 +100,22 @@
   gap: 4px;
 }
 
-.codian-inline-menu-layer .codian-model-dropdown,
-.codian-inline-menu-layer .codian-thinking-options {
+.codian-inline-menu-layer .codian-model-dropdown {
   position: fixed;
   z-index: 1000;
   left: auto;
   top: auto;
   bottom: var(--codian-fixed-dropdown-bottom, auto);
   right: var(--codian-fixed-dropdown-right, auto);
+}
+
+.codian-inline-menu-layer .codian-thinking-options {
+  position: fixed;
+  z-index: 1100;
+  left: var(--codian-thinking-popover-left, 8px);
+  right: auto;
+  top: auto;
+  bottom: var(--codian-thinking-popover-bottom, 8px);
 }
 
 /* Clarifying question: the card's first section, above the reply row. */

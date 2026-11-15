@@ -87,7 +87,6 @@
   transition: opacity 0.15s ease, visibility 0.15s ease;
 }
 
-.codian-model-selector:hover .codian-model-dropdown,
 .codian-model-dropdown.visible {
   opacity: 1;
   visibility: visible;
@@ -133,66 +132,6 @@
 }
 
 .codian-model-option.selected {
-  background: rgba(var(--codian-brand-rgb), 0.15);
-  color: var(--codian-brand);
-  font-weight: 500;
-}
-
-.codian-model-option-with-effort {
-  position: relative;
-}
-
-.codian-model-effort-chevron {
-  margin-left: auto;
-}
-
-.codian-model-effort-options {
-  position: absolute;
-  left: 100%;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 100%;
-  padding: 4px;
-  border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  background: var(--background-secondary);
-  box-shadow: 2px -2px 8px rgba(0, 0, 0, 0.15);
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.15s ease, visibility 0.15s ease;
-}
-
-.codian-model-option-with-effort:hover .codian-model-effort-options {
-  opacity: 1;
-  visibility: visible;
-}
-
-.codian-model-dropdown.align-right .codian-model-effort-options {
-  left: auto;
-  right: 100%;
-  box-shadow: -2px -2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.codian-model-effort-options:hover {
-  opacity: 1;
-  visibility: visible;
-}
-
-.codian-model-effort-option {
-  padding: 4px 8px;
-  border-radius: 3px;
-  color: var(--text-muted);
-  cursor: pointer;
-}
-
-.codian-model-effort-option:hover {
-  background: var(--background-modifier-hover);
-  color: var(--text-normal);
-}
-
-.codian-model-effort-option.selected {
   background: rgba(var(--codian-brand-rgb), 0.15);
   color: var(--codian-brand);
   font-weight: 500;

@@ -202,13 +202,13 @@ describe('ModelSelector', () => {
     expect(container).not.toBeNull();
   });
 
-  it('should display current model label', () => {
-    // Default model is 'sonnet' which maps to 'Sonnet'
+  it('should display current model label without the effort suffix', () => {
+    // Reasoning effort is shown by ThinkingBudgetSelector, not by the model button.
     const btn = parentEl.querySelector('.codian-model-btn');
     expect(btn).not.toBeNull();
     const label = btn?.querySelector('.codian-model-label');
     expect(label).not.toBeNull();
-    expect(label?.textContent).toBe('Sonnet (high)');
+    expect(label?.textContent).toBe('Sonnet');
   });
 
   it('should render a brain icon element inside the model button', () => {
@@ -221,8 +221,8 @@ describe('ModelSelector', () => {
 
   it('should set title and aria-label attributes to model label on model button', () => {
     const btn = parentEl.querySelector('.codian-model-btn');
-    expect(btn?.getAttribute('title')).toBe('Sonnet (high)');
-    expect(btn?.getAttribute('aria-label')).toBe('Sonnet (high)');
+    expect(btn?.getAttribute('title')).toBe('Sonnet');
+    expect(btn?.getAttribute('aria-label')).toBe('Sonnet');
   });
 
   it('should toggle dropdown visibility when model button is clicked', () => {
@@ -249,15 +249,15 @@ describe('ModelSelector', () => {
     expect(dropdown?.hasClass('visible')).toBe(false);
   });
 
-  it('should render effort as a model submenu', () => {
+  it('should not nest effort options inside the model dropdown', () => {
     const dropdown = parentEl.querySelector('.codian-model-dropdown');
     const sonnetOption = dropdown?.children.find((option: any) =>
       option.children[0]?.textContent === 'Sonnet'
     );
 
-    expect(sonnetOption?.querySelector('.codian-model-effort-options')).not.toBeNull();
-    expect(sonnetOption?.querySelectorAll('.codian-model-effort-option')
-      .map((option: any) => option.textContent)).toEqual(['Low', 'Med', 'High', 'Max']);
+    expect(sonnetOption?.querySelector('.codian-model-effort-options')).toBeNull();
+    expect(sonnetOption?.querySelector('.codian-model-effort-chevron')).toBeNull();
+    expect(dropdown?.querySelector('.codian-model-effort-option')).toBeNull();
   });
 
   it('should hide fallback Claude candidates for a bound Claude session', () => {
@@ -280,18 +280,16 @@ describe('ModelSelector', () => {
     expect(dropdown.querySelector('.codian-model-group')).toBeNull();
   });
 
-  it('should select model and effort from an effort submenu', async () => {
+  it('should only change the model when a model option is clicked', async () => {
     const dropdown = parentEl.querySelector('.codian-model-dropdown');
     const opusOption = dropdown?.children.find((option: any) =>
       option.children[0]?.textContent === 'Opus'
     );
-    const lowEffort = opusOption?.querySelectorAll('.codian-model-effort-option')
-      .find((option: any) => option.textContent === 'Low');
 
-    await lowEffort?.dispatchEvent('click', { stopPropagation: () => {} });
+    await opusOption?.dispatchEvent('click', { stopPropagation: () => {} });
 
     expect(callbacks.onModelChange).toHaveBeenCalledWith('opus');
-    expect(callbacks.onEffortLevelChange).toHaveBeenCalledWith('low');
+    expect(callbacks.onEffortLevelChange).not.toHaveBeenCalled();
   });
 
   it('should display first model when current model not found', () => {
@@ -558,6 +556,17 @@ describe('ThinkingBudgetSelector', () => {
   let callbacks: ReturnType<typeof createMockCallbacks>;
   let selector: ThinkingBudgetSelector;
 
+  const effortEl = () => parentEl.querySelector('.codian-thinking-effort');
+  const budgetEl = () => parentEl.querySelector('.codian-thinking-budget');
+  const effortTrigger = () => effortEl()?.querySelector('.codian-thinking-trigger');
+  const budgetTrigger = () => budgetEl()?.querySelector('.codian-thinking-trigger');
+  const effortPopover = () => effortEl()?.querySelector('.codian-thinking-options');
+  const budgetPopover = () => budgetEl()?.querySelector('.codian-thinking-options');
+  const gearLabels = (popover: any) => (popover?.querySelectorAll('.codian-thinking-gear-label') ?? [])
+    .map((el: any) => el.textContent);
+  const findGear = (popover: any, label: string) => (popover?.querySelectorAll('.codian-thinking-gear') ?? [])
+    .find((gear: any) => gear.querySelector('.codian-thinking-gear-label')?.textContent === label);
+
   describe('adaptive mode (Claude models)', () => {
     beforeEach(() => {
       jest.clearAllMocks();
@@ -571,10 +580,11 @@ describe('ThinkingBudgetSelector', () => {
       expect(container).not.toBeNull();
     });
 
-    it('should hide standalone effort selector for Claude models', () => {
+    it('should show the effort control as its own trigger', () => {
       const effort = parentEl.querySelector('.codian-thinking-effort');
       expect(effort).not.toBeNull();
-      expect(effort?.style?.display).toBe('none');
+      expect(effort?.style?.display).not.toBe('none');
+      expect(effort?.querySelector('.codian-thinking-current')?.textContent).toBe('高');
     });
 
     it('should hide budget selector for Claude models', () => {
@@ -582,6 +592,43 @@ describe('ThinkingBudgetSelector', () => {
       expect(budget?.style?.display).toBe('none');
     });
 
+    it('should open and close a standalone effort popover on click', () => {
+      const trigger = effortTrigger();
+      const popover = effortPopover();
+
+      expect(popover?.hasClass('visible')).toBe(false);
+      trigger.click();
+      expect(popover?.hasClass('visible')).toBe(true);
+      expect(gearLabels(popover)).toEqual(['低', '中', '高', '最高']);
+
+      trigger.click();
+      expect(popover?.hasClass('visible')).toBe(false);
+    });
+
+    it('should change effort from the popover and close it', async () => {
+      effortTrigger().click();
+      const lowGear = findGear(effortPopover(), '低');
+
+      await lowGear?.dispatchEvent('click', { stopPropagation: () => {} });
+
+      expect(callbacks.onEffortLevelChange).toHaveBeenCalledWith('low');
+      expect(effortPopover().hasClass('visible')).toBe(false);
+    });
+
+    it('should mark the current effort as selected', () => {
+      effortTrigger().click();
+      const highGear = findGear(effortPopover(), '高');
+      expect(highGear?.hasClass('selected')).toBe(true);
+      expect(highGear?.getAttribute('aria-checked')).toBe('true');
+    });
+
+    it('should close the popover when clicking outside', () => {
+      effortTrigger().click();
+      expect(effortPopover().hasClass('visible')).toBe(true);
+
+      parentEl.ownerDocument.dispatchEvent({ type: 'click', target: createMockEl('div') });
+      expect(effortPopover().hasClass('visible')).toBe(false);
+    });
   });
 
   describe('legacy mode (custom models)', () => {
@@ -613,8 +660,8 @@ describe('ThinkingBudgetSelector', () => {
     });
 
     it('should display current budget label', () => {
-      const current = parentEl.querySelector('.codian-thinking-current');
-      expect(current?.textContent).toBe('Low');
+      const current = budgetEl()?.querySelector('.codian-thinking-current');
+      expect(current?.textContent).toBe('低');
     });
 
     it('should display Off when budget is off', () => {
@@ -627,47 +674,40 @@ describe('ThinkingBudgetSelector', () => {
         enableSonnet1M: false,
       });
       selector.updateDisplay();
-      const current = parentEl.querySelector('.codian-thinking-current');
-      expect(current?.textContent).toBe('Off');
+      const current = budgetEl()?.querySelector('.codian-thinking-current');
+      expect(current?.textContent).toBe('关闭');
     });
 
-    it('should render budget options in reverse order', () => {
-      const options = parentEl.querySelector('.codian-thinking-options');
-      expect(options).not.toBeNull();
-      // THINKING_BUDGETS reversed: [xhigh, high, medium, low, off]
-      const gears = options?.children || [];
-      expect(gears.length).toBe(5);
-      expect(gears[0]?.textContent).toBe('Ultra');
-      expect(gears[4]?.textContent).toBe('Off');
+    it('should render budget options in the popover on click', () => {
+      budgetTrigger().click();
+      const popover = budgetPopover();
+      expect(popover?.hasClass('visible')).toBe(true);
+      expect(gearLabels(popover)).toEqual(['关闭', '低', '中', '高', '超高']);
     });
 
     it('should mark current budget as selected', () => {
-      const options = parentEl.querySelector('.codian-thinking-options');
-      const gears = options?.children || [];
-      const lowGear = gears.find((g: any) => g.textContent === 'Low');
+      budgetTrigger().click();
+      const lowGear = findGear(budgetPopover(), '低');
       expect(lowGear?.hasClass('selected')).toBe(true);
     });
 
-    it('should call onThinkingBudgetChange when gear clicked', async () => {
-      const options = parentEl.querySelector('.codian-thinking-options');
-      const gears = options?.children || [];
-      const highGear = gears.find((g: any) => g.textContent === 'High');
+    it('should call onThinkingBudgetChange when an option is clicked', async () => {
+      budgetTrigger().click();
+      const highGear = findGear(budgetPopover(), '高');
 
       await highGear?.dispatchEvent('click', { stopPropagation: () => {} });
       expect(callbacks.onThinkingBudgetChange).toHaveBeenCalledWith('high');
     });
 
     it('should set title with token count for non-off budgets', () => {
-      const options = parentEl.querySelector('.codian-thinking-options');
-      const gears = options?.children || [];
-      const highGear = gears.find((g: any) => g.textContent === 'High');
+      budgetTrigger().click();
+      const highGear = findGear(budgetPopover(), '高');
       expect(highGear?.getAttribute('title')).toContain('16,000 tokens');
     });
 
     it('should set title as Disabled for off budget', () => {
-      const options = parentEl.querySelector('.codian-thinking-options');
-      const gears = options?.children || [];
-      const offGear = gears.find((g: any) => g.textContent === 'Off');
+      budgetTrigger().click();
+      const offGear = findGear(budgetPopover(), '关闭');
       expect(offGear?.getAttribute('title')).toBe('Disabled');
     });
   });

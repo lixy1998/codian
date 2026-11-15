@@ -4,6 +4,17 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.7.10 — 2026-11-15
+
+- **Reasoning strength is now its own control.** Effort levels used to live in a hover submenu
+  inside the model dropdown, so reaching them meant moving the pointer sideways from a model row.
+  They are now a separate toolbar button that opens a dedicated popover; the model dropdown lists
+  models only, and the model button no longer appends the current level.
+  - Level labels render in Chinese (低 / 中 / 高 / 最高, 开启（默认）…), mapped from the option value
+    with the provider's own label kept as a fallback.
+  - The popover anchors to the trigger's left edge instead of viewport arithmetic, which pushed it
+    toward the right edge in narrow windows.
+
 ## 1.7.9 — 2026-10-31
 
 - **The composer wraps again, and grows with what you type.** The CodeMirror composer replaced the

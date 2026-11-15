@@ -1,4 +1,6 @@
-/* Thinking selector (effort for adaptive models, token budget for custom) */
+/* Thinking (reasoning strength) control.
+   Deliberately separate from the model picker: the trigger always shows the
+   current level, and clicking it opens a standalone popover. */
 .codian-thinking-selector {
   display: flex;
   align-items: center;
@@ -8,6 +10,7 @@
 /* Effort / budget container (shared layout) */
 .codian-thinking-effort,
 .codian-thinking-budget {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -19,59 +22,97 @@
 }
 
 .codian-thinking-gears {
-  position: relative;
   display: flex;
   align-items: center;
   border-radius: 4px;
 }
 
-/* Current selection (visible when collapsed) */
-.codian-thinking-current {
-  padding: 3px 8px;
-  font-size: 11px;
-  color: var(--codian-brand);
-  font-weight: 500;
+/* Trigger: current level, click to open the popover */
+.codian-thinking-trigger {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
   cursor: pointer;
-  border-radius: 3px;
+  user-select: none;
   white-space: nowrap;
-  background: transparent;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-/* Options container - expands vertically upward */
+.codian-thinking-trigger:hover,
+.codian-thinking-trigger.active,
+.codian-thinking-trigger:focus-visible {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.codian-thinking-current {
+  font-weight: 500;
+  color: var(--codian-brand);
+}
+
+.codian-thinking-trigger-chevron {
+  display: flex;
+  align-items: center;
+  color: var(--text-faint);
+}
+
+.codian-thinking-trigger-chevron svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Popover, anchored to the trigger's left edge (parent is position: relative) */
 .codian-thinking-options {
   position: absolute;
   left: 0;
-  bottom: 100%;
-  margin-bottom: 0;
+  bottom: calc(100% + 6px);
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 168px;
+  max-width: min(240px, 90vw);
+  padding: 6px;
   background: var(--background-secondary);
   border: 1px solid var(--background-modifier-border);
-  border-radius: 4px;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  padding: 4px;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  z-index: 1100;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.15s ease, visibility 0.15s ease;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease, visibility 0.12s ease;
 }
 
-/* Expand on hover or when opened */
-.codian-thinking-gears:hover .codian-thinking-options,
 .codian-thinking-options.visible {
   opacity: 1;
   visibility: visible;
+  transform: translateY(0);
+}
+
+.codian-thinking-popover-title {
+  padding: 2px 8px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-faint);
 }
 
 .codian-thinking-gear {
-  padding: 3px 8px;
-  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
   color: var(--text-muted);
+  border-radius: 4px;
   cursor: pointer;
-  border-radius: 3px;
-  transition: background 0.1s ease, color 0.1s ease;
   white-space: nowrap;
+  transition: background 0.1s ease, color 0.1s ease;
 }
 
 .codian-thinking-gear:hover {
@@ -83,4 +124,19 @@
   background: rgba(var(--codian-brand-rgb), 0.15);
   color: var(--codian-brand);
   font-weight: 500;
+}
+
+.codian-thinking-gear-label {
+  flex: 1 1 auto;
+}
+
+.codian-thinking-gear-check {
+  display: flex;
+  align-items: center;
+  color: var(--codian-brand);
+}
+
+.codian-thinking-gear-check svg {
+  width: 12px;
+  height: 12px;
 }

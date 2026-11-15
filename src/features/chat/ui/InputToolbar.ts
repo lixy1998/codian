@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 import type { McpServerCatalog } from '../../../core/mcp/McpServerCatalog';
+import { localizeReasoningOptionLabel } from '../../../core/providers/reasoning';
 import type {
   ProviderCapabilities,
   ProviderChatUIConfig,
@@ -101,30 +102,12 @@ export class ModelSelector {
     return models;
   }
 
-  private getEffortOptions(model: string): ProviderReasoningOption[] {
-    const settings = this.callbacks.getSettings();
-    const uiConfig = this.callbacks.getUIConfig();
-    if (this.callbacks.getCapabilities().reasoningControl !== 'effort'
-      || !uiConfig.isAdaptiveReasoningModel(model, settings)) {
-      return [];
-    }
-    return uiConfig.getReasoningOptions(model, settings);
-  }
-
+  /**
+   * Reasoning effort lives in its own toolbar control (ThinkingBudgetSelector),
+   * so the model button only ever shows the model name.
+   */
   private getDisplayLabel(model: ProviderUIOption): string {
-    const currentModel = this.callbacks.getSettings().model;
-    if (model.value !== currentModel) {
-      return model.label;
-    }
-
-    const effortOptions = this.getEffortOptions(model.value);
-    if (effortOptions.length <= 1) {
-      return model.label;
-    }
-
-    const currentEffort = this.callbacks.getSettings().effortLevel;
-    const activeOption = effortOptions.find(option => option.value === currentEffort);
-    return activeOption ? `${model.label} (${activeOption.label.toLowerCase()})` : model.label;
+    return model.label;
   }
 
   private render() {
@@ -208,11 +191,6 @@ export class ModelSelector {
         option.setAttribute('title', model.description);
       }
 
-      const effortOptions = this.getEffortOptions(model.value);
-      if (effortOptions.length > 1) {
-        this.renderEffortSubmenu(option, model, effortOptions);
-      }
-
       option.addEventListener('click', (e) => {
         e.stopPropagation();
         this.dropdownEl?.classList.remove('visible');
@@ -221,39 +199,6 @@ export class ModelSelector {
           this.updateDisplay();
           this.renderOptions();
         }, 'Failed to change model');
-      });
-    }
-  }
-
-  private renderEffortSubmenu(
-    optionEl: HTMLElement,
-    model: ProviderUIOption,
-    effortOptions: ProviderReasoningOption[],
-  ): void {
-    optionEl.addClass('codian-model-option-with-effort');
-    optionEl.createSpan({ cls: 'codian-model-effort-chevron', text: '›' });
-    const submenuEl = optionEl.createDiv({ cls: 'codian-model-effort-options' });
-    const currentModel = this.callbacks.getSettings().model;
-    const currentEffort = this.callbacks.getSettings().effortLevel;
-
-    for (const effort of effortOptions) {
-      const effortEl = submenuEl.createDiv({ cls: 'codian-model-effort-option' });
-      effortEl.setText(effort.label);
-      if (model.value === currentModel && effort.value === currentEffort) {
-        effortEl.addClass('selected');
-      }
-      if (effort.description) {
-        effortEl.setAttribute('title', effort.description);
-      }
-      effortEl.addEventListener('click', (event) => {
-        event.stopPropagation();
-        this.dropdownEl?.classList.remove('visible');
-        runToolbarAction(async () => {
-          await this.callbacks.onModelChange(model.value);
-          await this.callbacks.onEffortLevelChange(effort.value);
-          this.updateDisplay();
-          this.renderOptions();
-        }, 'Failed to change model effort');
       });
     }
   }
@@ -349,146 +294,261 @@ export class ModeSelector {
   }
 }
 
+type ReasoningControlKind = 'effort' | 'budget';
+
+interface ReasoningControlRefs {
+  trigger: HTMLElement;
+  value: HTMLElement;
+  popover: HTMLElement;
+}
+
+/**
+ * Reasoning strength control, kept separate from the model picker.
+ *
+ * The trigger shows the current level; clicking it opens a standalone popover
+ * with the available levels. The model dropdown never nests these options.
+ */
 export class ThinkingBudgetSelector {
   private container: HTMLElement;
   private effortEl: HTMLElement | null = null;
-  private effortGearsEl: HTMLElement | null = null;
   private budgetEl: HTMLElement | null = null;
-  private budgetGearsEl: HTMLElement | null = null;
+  private controls: Partial<Record<ReasoningControlKind, ReasoningControlRefs>> = {};
   private callbacks: ToolbarCallbacks;
+  private outsideClickListener: ((e: MouseEvent) => void) | null = null;
+  private keydownListener: ((e: KeyboardEvent) => void) | null = null;
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
     this.container = parentEl.createDiv({ cls: 'codian-thinking-selector' });
     this.render();
+
+    this.outsideClickListener = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (this.container.contains(target)) return;
+      this.closeAll();
+    };
+    this.keydownListener = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        this.closeAll();
+      }
+    };
+
+    const doc = this.container.ownerDocument ?? window.document;
+    doc.addEventListener('click', this.outsideClickListener);
+    doc.addEventListener('keydown', this.keydownListener);
+  }
+
+  destroy(): void {
+    const doc = this.container.ownerDocument ?? window.document;
+    if (this.outsideClickListener) {
+      doc.removeEventListener('click', this.outsideClickListener);
+      this.outsideClickListener = null;
+    }
+    if (this.keydownListener) {
+      doc.removeEventListener('keydown', this.keydownListener);
+      this.keydownListener = null;
+    }
+    this.container.empty();
   }
 
   private render() {
     this.container.empty();
+    this.controls = {};
 
-    // Effort selector (for adaptive thinking models)
+    // Effort selector (adaptive reasoning models)
     this.effortEl = this.container.createDiv({ cls: 'codian-thinking-effort' });
-    const effortLabel = this.effortEl.createSpan({ cls: 'codian-thinking-label-text' });
-    effortLabel.setText('Effort:');
-    this.effortGearsEl = this.effortEl.createDiv({ cls: 'codian-thinking-gears' });
+    this.controls.effort = this.createControl(this.effortEl, 'effort', '思考强度');
 
-    // Legacy budget selector (for custom models)
+    // Legacy budget selector (custom models)
     this.budgetEl = this.container.createDiv({ cls: 'codian-thinking-budget' });
-    const budgetLabel = this.budgetEl.createSpan({ cls: 'codian-thinking-label-text' });
-    budgetLabel.setText('Thinking:');
-    this.budgetGearsEl = this.budgetEl.createDiv({ cls: 'codian-thinking-gears' });
+    this.controls.budget = this.createControl(this.budgetEl, 'budget', '思考预算');
 
     this.updateDisplay();
   }
 
-  private renderEffortGears() {
-    if (!this.effortGearsEl) return;
-    this.effortGearsEl.empty();
+  private createControl(
+    parentEl: HTMLElement,
+    kind: ReasoningControlKind,
+    label: string,
+  ): ReasoningControlRefs {
+    const trigger = parentEl.createDiv({
+      cls: 'codian-thinking-trigger',
+      attr: {
+        role: 'button',
+        tabindex: '0',
+        'aria-haspopup': 'menu',
+        'aria-expanded': 'false',
+      },
+    });
+    trigger.createSpan({ cls: 'codian-thinking-label-text', text: label });
+    const value = trigger.createSpan({ cls: 'codian-thinking-current' });
+    const chevronEl = trigger.createSpan({ cls: 'codian-thinking-trigger-chevron' });
+    setIcon(chevronEl, 'chevron-up');
 
-    const currentEffort = this.callbacks.getSettings().effortLevel;
-    const uiConfig = this.callbacks.getUIConfig();
-    const settings = this.callbacks.getSettings();
-    const model = settings.model;
-    const options = uiConfig.getReasoningOptions(model, settings);
-    const currentInfo = options.find(e => e.value === currentEffort);
+    const popover = parentEl.createDiv({
+      cls: 'codian-thinking-options',
+      attr: { role: 'menu' },
+    });
 
-    const currentEl = this.effortGearsEl.createDiv({ cls: 'codian-thinking-current' });
-    currentEl.setText(currentInfo?.label || options[0]?.label || 'High');
-
-    const optionsEl = this.effortGearsEl.createDiv({ cls: 'codian-thinking-options' });
-
-    for (const effort of [...options].reverse()) {
-      const gearEl = optionsEl.createDiv({ cls: 'codian-thinking-gear' });
-      gearEl.setText(effort.label);
-      if (effort.description) {
-        gearEl.setAttribute('title', effort.description);
-      }
-
-      if (effort.value === currentEffort) {
-        gearEl.addClass('selected');
-      }
-
-      gearEl.addEventListener('click', (e) => {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggle(kind);
+    });
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowUp') {
+        e.preventDefault();
         e.stopPropagation();
-        runToolbarAction(async () => {
-          await this.callbacks.onEffortLevelChange(effort.value);
-          this.updateDisplay();
-        }, 'Failed to change effort level');
-      });
+        this.open(kind);
+      }
+    });
+
+    return { trigger, value, popover };
+  }
+
+  private getControl(kind: ReasoningControlKind): ReasoningControlRefs | undefined {
+    return this.controls[kind];
+  }
+
+  private isOpen(kind: ReasoningControlKind): boolean {
+    return this.getControl(kind)?.popover.classList.contains('visible') ?? false;
+  }
+
+  private toggle(kind: ReasoningControlKind): void {
+    if (this.isOpen(kind)) {
+      this.close(kind);
+    } else {
+      this.open(kind);
     }
   }
 
-  private renderBudgetGears() {
-    if (!this.budgetGearsEl) return;
-    this.budgetGearsEl.empty();
+  private closeAll(): void {
+    this.close('effort');
+    this.close('budget');
+  }
 
-    const currentBudget = this.callbacks.getSettings().thinkingBudget;
-    const uiConfig = this.callbacks.getUIConfig();
+  private close(kind: ReasoningControlKind): void {
+    const control = this.getControl(kind);
+    if (!control) return;
+    control.popover.classList.remove('visible');
+    control.trigger.classList.remove('active');
+    control.trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  private open(kind: ReasoningControlKind): void {
+    const control = this.getControl(kind);
+    if (!control) return;
+    this.closeAll();
+    if (!this.renderOptions(kind)) {
+      return;
+    }
+    control.popover.classList.add('visible');
+    control.trigger.classList.add('active');
+    control.trigger.setAttribute('aria-expanded', 'true');
+  }
+
+  private getReasoningOptions(): ProviderReasoningOption[] {
     const settings = this.callbacks.getSettings();
-    const model = settings.model;
-    const options: ProviderReasoningOption[] = uiConfig.getReasoningOptions(model, settings);
-    const currentBudgetInfo = options.find(b => b.value === currentBudget);
+    return this.callbacks.getUIConfig().getReasoningOptions(settings.model, settings);
+  }
 
-    const currentEl = this.budgetGearsEl.createDiv({ cls: 'codian-thinking-current' });
-    currentEl.setText(currentBudgetInfo?.label || options[0]?.label || 'Off');
+  private renderOptions(kind: ReasoningControlKind): boolean {
+    const control = this.getControl(kind);
+    if (!control) return false;
+    control.popover.empty();
 
-    const optionsEl = this.budgetGearsEl.createDiv({ cls: 'codian-thinking-options' });
+    const settings = this.callbacks.getSettings();
+    const options = this.getReasoningOptions();
+    if (options.length === 0) return false;
 
-    for (const budget of [...options].reverse()) {
-      const gearEl = optionsEl.createDiv({ cls: 'codian-thinking-gear' });
-      gearEl.setText(budget.label);
-      const tokens = budget.tokens ?? 0;
-      gearEl.setAttribute('title', tokens > 0 ? `${tokens.toLocaleString()} tokens` : 'Disabled');
+    const currentValue = kind === 'effort' ? settings.effortLevel : settings.thinkingBudget;
 
-      if (budget.value === currentBudget) {
+    control.popover.createDiv({
+      cls: 'codian-thinking-popover-title',
+      text: kind === 'effort' ? '思考强度' : '思考预算',
+    });
+
+    for (const option of options) {
+      const gearEl = control.popover.createDiv({
+        cls: 'codian-thinking-gear',
+        attr: { role: 'menuitemradio', 'aria-checked': 'false' },
+      });
+      gearEl.createSpan({ cls: 'codian-thinking-gear-label', text: localizeReasoningOptionLabel(option) });
+
+      if (option.description) {
+        gearEl.setAttribute('title', option.description);
+      } else if (kind === 'budget') {
+        const tokens = option.tokens ?? 0;
+        gearEl.setAttribute('title', tokens > 0 ? `${tokens.toLocaleString()} tokens` : 'Disabled');
+      }
+
+      const checkEl = gearEl.createSpan({ cls: 'codian-thinking-gear-check' });
+      if (option.value === currentValue) {
         gearEl.addClass('selected');
+        gearEl.setAttribute('aria-checked', 'true');
+        setIcon(checkEl, 'check');
       }
 
       gearEl.addEventListener('click', (e) => {
         e.stopPropagation();
+        this.close(kind);
         runToolbarAction(async () => {
-          await this.callbacks.onThinkingBudgetChange(budget.value);
+          if (kind === 'effort') {
+            await this.callbacks.onEffortLevelChange(option.value);
+          } else {
+            await this.callbacks.onThinkingBudgetChange(option.value);
+          }
           this.updateDisplay();
-        }, 'Failed to change thinking budget');
+        }, kind === 'effort' ? 'Failed to change effort level' : 'Failed to change thinking budget');
       });
     }
+
+    return true;
+  }
+
+  private updateTriggerValue(kind: ReasoningControlKind): void {
+    const control = this.getControl(kind);
+    if (!control) return;
+
+    const settings = this.callbacks.getSettings();
+    const options = this.getReasoningOptions();
+    const currentValue = kind === 'effort' ? settings.effortLevel : settings.thinkingBudget;
+    const currentInfo = options.find(option => option.value === currentValue) ?? options[0];
+    control.value.setText(currentInfo ? localizeReasoningOptionLabel(currentInfo) : '');
   }
 
   updateDisplay() {
     const capabilities = this.callbacks.getCapabilities();
-    if (capabilities.reasoningControl === 'none') {
-      this.effortEl?.addClass('codian-hidden');
-      this.budgetEl?.addClass('codian-hidden');
-      return;
-    }
-
     const settings = this.callbacks.getSettings();
-    const model = settings.model;
     const uiConfig = this.callbacks.getUIConfig();
-    const options = uiConfig.getReasoningOptions(model, settings);
-    const defaultValue = uiConfig.getDefaultReasoningValue(model, settings);
-    const shouldHide = options.length === 0
+    const options = this.getReasoningOptions();
+    const defaultValue = uiConfig.getDefaultReasoningValue(settings.model, settings);
+    const shouldHide = capabilities.reasoningControl === 'none'
+      || options.length === 0
       || (options.length === 1 && options[0]?.value === defaultValue);
 
     if (shouldHide) {
+      this.closeAll();
       this.effortEl?.addClass('codian-hidden');
       this.budgetEl?.addClass('codian-hidden');
       return;
     }
 
-    const adaptive = uiConfig.isAdaptiveReasoningModel(model, settings);
+    const adaptive = uiConfig.isAdaptiveReasoningModel(settings.model, settings);
+    const useEffort = adaptive && capabilities.reasoningControl === 'effort';
+    const useBudget = !useEffort;
 
-    if (this.effortEl) {
-      this.effortEl.toggleClass('codian-hidden', !adaptive);
-    }
-    if (this.budgetEl) {
-      this.budgetEl.toggleClass('codian-hidden', adaptive);
-    }
+    this.effortEl?.toggleClass('codian-hidden', !useEffort);
+    this.budgetEl?.toggleClass('codian-hidden', !useBudget);
 
-    if (adaptive) {
-      this.effortEl?.addClass('codian-hidden');
-    } else {
-      this.renderBudgetGears();
+    if (!useEffort) this.close('effort');
+    if (!useBudget) this.close('budget');
+
+    if (useEffort) {
+      this.updateTriggerValue('effort');
+    }
+    if (useBudget) {
+      this.updateTriggerValue('budget');
     }
   }
 }

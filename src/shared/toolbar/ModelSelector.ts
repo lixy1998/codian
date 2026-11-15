@@ -2,8 +2,7 @@ import { Notice, setIcon } from 'obsidian';
 
 import { getEnabledProviderForModel } from '../../core/providers/modelRouting';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
-import { ProviderSettingsCoordinator } from '../../core/providers/ProviderSettingsCoordinator';
-import type { ProviderId, ProviderReasoningOption, ProviderUIOption } from '../../core/providers/types';
+import type { ProviderId, ProviderUIOption } from '../../core/providers/types';
 import { createProviderIconSvg } from '../icons';
 import type { ModelPickerCallbacks } from './types';
 
@@ -100,52 +99,18 @@ export class ModelSelector {
         '--codian-fixed-dropdown-bottom': `${Math.max(8, viewportHeight - rect.top + 4)}px`,
         '--codian-fixed-dropdown-right': `${Math.max(8, viewportWidth - rect.right)}px`,
       });
-
-      if (rect.right > viewportWidth - 180) {
-        this.dropdownEl.classList.add('align-right');
-      } else {
-        this.dropdownEl.classList.remove('align-right');
-      }
     }
 
     this.dropdownEl.classList.add('visible');
     this.buttonEl.setAttribute('aria-expanded', 'true');
   }
 
-  private getEffortOptions(model: ProviderUIOption): ProviderReasoningOption[] {
-    if (typeof this.callbacks.getEffortOptions === 'function') {
-      return this.callbacks.getEffortOptions(model);
-    }
-    const settings = this.callbacks.getSettings();
-    const providerId = (model.providerId as ProviderId)
-      ?? getEnabledProviderForModel(model.value, settings, settings.providerId);
-    if (!ProviderRegistry.getRegisteredProviderIds().includes(providerId)) {
-      return [];
-    }
-    const capabilities = ProviderRegistry.getCapabilities(providerId);
-    const uiConfig = ProviderRegistry.getChatUIConfig(providerId);
-    const providerSettings = ProviderSettingsCoordinator.getProviderSettingsSnapshot(settings, providerId);
-    if (capabilities.reasoningControl !== 'effort'
-      || !uiConfig.isAdaptiveReasoningModel(model.value, providerSettings)) {
-      return [];
-    }
-    return uiConfig.getReasoningOptions(model.value, providerSettings);
-  }
-
+  /**
+   * Reasoning effort is rendered by ThinkingSelector, so the model button only
+   * ever shows the model name.
+   */
   private getDisplayLabel(model: ProviderUIOption): string {
-    const settings = this.callbacks.getSettings();
-    if (model.value !== settings.model) {
-      return model.label;
-    }
-
-    const effortOptions = this.getEffortOptions(model);
-    if (effortOptions.length <= 1) {
-      return model.label;
-    }
-
-    const currentEffort = settings.reasoning;
-    const activeOption = effortOptions.find(option => option.value === currentEffort);
-    return activeOption ? `${model.label} (${activeOption.label.toLowerCase()})` : model.label;
+    return model.label;
   }
 
   private render(): void {
@@ -270,11 +235,6 @@ export class ModelSelector {
         option.setAttribute('title', model.description);
       }
 
-      const effortOptions = this.getEffortOptions(model);
-      if (effortOptions.length > 1) {
-        this.renderEffortSubmenu(option, model, modelProvider, effortOptions);
-      }
-
       option.addEventListener('click', (e) => {
         e.stopPropagation();
         this.close();
@@ -283,41 +243,6 @@ export class ModelSelector {
           this.updateDisplay();
           this.renderOptions();
         }, 'Failed to change model');
-      });
-    }
-  }
-
-  private renderEffortSubmenu(
-    optionEl: HTMLElement,
-    model: ProviderUIOption,
-    providerId: ProviderId,
-    effortOptions: ProviderReasoningOption[],
-  ): void {
-    optionEl.addClass('codian-model-option-with-effort');
-    optionEl.createSpan({ cls: 'codian-model-effort-chevron', text: '›' });
-    const submenuEl = optionEl.createDiv({ cls: 'codian-model-effort-options' });
-    const settings = this.callbacks.getSettings();
-    const currentModel = settings.model;
-    const currentEffort = settings.reasoning;
-
-    for (const effort of effortOptions) {
-      const effortEl = submenuEl.createDiv({ cls: 'codian-model-effort-option' });
-      effortEl.setText(effort.label);
-      if (model.value === currentModel && effort.value === currentEffort) {
-        effortEl.addClass('selected');
-      }
-      if (effort.description) {
-        effortEl.setAttribute('title', effort.description);
-      }
-      effortEl.addEventListener('click', (event) => {
-        event.stopPropagation();
-        this.close();
-        runToolbarAction(async () => {
-          await this.callbacks.onModelChange(model.value, providerId);
-          await this.callbacks.onEffortLevelChange(effort.value);
-          this.updateDisplay();
-          this.renderOptions();
-        }, 'Failed to change model effort');
       });
     }
   }
