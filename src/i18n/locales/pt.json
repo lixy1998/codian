@@ -218,6 +218,7 @@
       "placeholder": "Peça alterações, mencione arquivos com @, execute /comandos",
       "message": "Mensagem",
       "dropImage": "Solte uma imagem aqui",
+      "dropFile": "Solte uma imagem ou arquivo aqui",
       "moreContext": "Mostrar mais {count} itens de contexto",
       "showLess": "Mostrar menos",
       "moreItems": "+{count} mais"
@@ -432,6 +433,13 @@
       "permissionDenied": "{message} (Permissão negada)",
       "preview": "Prévia da imagem: {name}",
       "closePreview": "Fechar prévia da imagem"
+    },
+    "documents": {
+      "attachment": "Anexo de arquivo: {name} · {size}",
+      "truncated": "conteúdo truncado",
+      "budgetExhausted": "O limite de anexos por mensagem foi atingido. Envie ou remova um arquivo primeiro.",
+      "pathUnavailable": "Não é possível resolver o caminho de \"{name}\", então ele não pode ser anexado.",
+      "attachFailed": "Falha ao anexar \"{name}\"."
     },
     "pi": {
       "extension": "Extensão Pi",

@@ -30,6 +30,7 @@ import { TOOL_EXIT_PLAN_MODE } from '../../../core/tools/toolNames';
 import type {
   ApprovalDecision,
   ChatMessage,
+  DocumentAttachment,
   ExitPlanModeDecision,
   ExitPlanModePresentationOptions,
   StreamChunk,
@@ -40,7 +41,7 @@ import { InstructionModal } from '../../../shared/modals/InstructionConfirmModal
 import { throwIfAborted } from '../../../utils/abort';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
-import { extractUserDisplayContent } from '../../../utils/context';
+import { appendAttachedDocuments, extractUserDisplayContent } from '../../../utils/context';
 import { formatDurationMmSs } from '../../../utils/date';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
@@ -167,6 +168,8 @@ export class InputController {
   private pendingSteerMessage: QueuedMessage | null = null;
   private activeStreamingAssistantMessage: ChatMessage | null = null;
   private pendingProviderUserMessages: PendingProviderUserMessage[] = [];
+  /** Documents attached to the in-flight turn, so a rolled-back turn can restore them. */
+  private inFlightDocuments: DocumentAttachment[] = [];
   private sawInitialProviderUserMessage = false;
   private awaitingProviderAssistantStart = false;
   private readonly turnCoordinator: TurnCoordinator<SendMessageOptions>;
@@ -363,7 +366,11 @@ export class InputController {
     const hasImages = imageOverride !== undefined
       ? imageOverride.length > 0
       : (imageContextManager?.hasImages() ?? false);
-    if (!content && !hasImages) return;
+    // Documents reach the model as prompt text, so they can start a turn on their own.
+    const hasDocuments = imageOverride === undefined
+      && (imageContextManager?.hasDocuments() ?? false);
+    if (!content && !hasImages && !hasDocuments) return;
+    this.inFlightDocuments = [];
 
     if (state.isRewinding) {
       new Notice(t('chat.rewind.inProgress'));
@@ -388,12 +395,16 @@ export class InputController {
       const images = hasImages
         ? [...(imageOverride ?? imageContextManager?.getAttachedImages() ?? [])]
         : undefined;
+      const documents = imageOverride === undefined
+        ? imageContextManager?.getAttachedDocuments()
+        : undefined;
       const editorContext = selectionController.getContext();
       const browserContext = browserSelectionController?.getContext() ?? null;
       const canvasContext = canvasSelectionController.getContext();
       const { displayContent, turnRequest } = this.buildTurnSubmission({
         content,
         images,
+        documents,
         editorContextOverride: editorContext,
         browserContextOverride: browserContext,
         canvasContextOverride: canvasContext,
@@ -410,6 +421,7 @@ export class InputController {
       }
       if (shouldUseInput) {
         imageContextManager?.clearImages();
+        imageContextManager?.clearDocuments();
         fileContextManager?.consumeDroppedReferences?.();
       }
       this.updateQueueIndicator();
@@ -446,11 +458,17 @@ export class InputController {
     // SDK handles expansion, $ARGUMENTS, @file references, and frontmatter options
     const images = imageOverride ?? imageContextManager?.getAttachedImages() ?? [];
     const imagesForMessage = images.length > 0 ? [...images] : undefined;
+    const documents = imageOverride === undefined
+      ? imageContextManager?.getAttachedDocuments()
+      : undefined;
     const isCompact = /^\/compact(\s|$)/i.test(content);
+    // Remembered so a failed or cancelled turn can put the attachments back.
+    this.inFlightDocuments = documents ? [...documents] : [];
 
     // Only clear images if we consumed user input (not for programmatic content override)
     if (shouldUseInput) {
       imageContextManager?.clearImages();
+      imageContextManager?.clearDocuments();
     }
 
     const turnSubmission = options?.turnRequestOverride
@@ -461,6 +479,7 @@ export class InputController {
       : this.buildTurnSubmission({
         content,
         images: imagesForMessage,
+        documents,
         editorContextOverride: options?.editorContextOverride,
         browserContextOverride: options?.browserContextOverride,
         canvasContextOverride: options?.canvasContextOverride,
@@ -688,6 +707,8 @@ export class InputController {
         streamController.hideThinkingIndicator();
         state.isStreaming = false;
         state.cancelRequested = false;
+        // The turn is settled; nothing left to restore from attachments.
+        this.inFlightDocuments = [];
         this.restorePendingSteerMessageToQueue();
 
         // Capture response duration before resetting state (skip for interrupted responses and compaction)
@@ -928,6 +949,16 @@ export class InputController {
     if (imageContextManager && (!options.mergeWithComposer || restoredImages.length > 0)) {
       imageContextManager.setImages(restoredImages);
     }
+
+    // Documents only live in the prompt payload, so the in-flight copy is the only way back.
+    const restoredDocuments = this.inFlightDocuments;
+    this.inFlightDocuments = [];
+    if (imageContextManager && restoredDocuments.length > 0) {
+      const currentDocuments = options.mergeWithComposer
+        ? imageContextManager.getAttachedDocuments()
+        : [];
+      imageContextManager.setDocuments([...restoredDocuments, ...currentDocuments]);
+    }
     this.deps.resetInputHeight();
     inputEl.focus();
   }
@@ -998,6 +1029,7 @@ export class InputController {
   private buildTurnSubmission(options: {
     content: string;
     images?: ChatMessage['images'];
+    documents?: readonly DocumentAttachment[];
     editorContextOverride?: EditorSelectionContext | null;
     browserContextOverride?: BrowserSelectionContext | null;
     canvasContextOverride?: CanvasSelectionContext | null;
@@ -1034,12 +1066,13 @@ export class InputController {
     const transformedText = !isCompact && fileContextManager
       ? fileContextManager.transformContextMentions(options.content)
       : options.content;
+    const submittedText = appendAttachedDocuments(transformedText, options.documents);
     const enabledMcpServers = mcpServerSelector?.getEnabledServers();
 
     return {
       displayContent: options.content,
       turnRequest: {
-        text: transformedText,
+        text: submittedText,
         images: options.images,
         currentNotePath: shouldSendCurrentNote && currentNotePath ? currentNotePath : undefined,
         editorSelection: editorContext,

@@ -218,6 +218,7 @@
       "placeholder": "Demandez des modifications, mentionnez des fichiers avec @, lancez des /commandes",
       "message": "Message",
       "dropImage": "Déposez une image ici",
+      "dropFile": "Déposez une image ou un fichier ici",
       "moreContext": "Afficher {count} autres éléments de contexte",
       "showLess": "Afficher moins",
       "moreItems": "+{count} de plus"
@@ -432,6 +433,13 @@
       "permissionDenied": "{message} (Accès refusé)",
       "preview": "Aperçu de l’image : {name}",
       "closePreview": "Fermer l’aperçu de l’image"
+    },
+    "documents": {
+      "attachment": "Pièce jointe : {name} · {size}",
+      "truncated": "contenu tronqué",
+      "budgetExhausted": "Le quota de pièces jointes pour un message est épuisé. Envoyez ou retirez un fichier d’abord.",
+      "pathUnavailable": "Impossible de résoudre le chemin du fichier « {name} », il ne peut pas être joint.",
+      "attachFailed": "Échec de l’ajout de « {name} »."
     },
     "pi": {
       "extension": "Extension Pi",

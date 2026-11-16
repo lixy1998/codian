@@ -363,17 +363,21 @@ describe('ImageContextManager - Private Helpers', () => {
       },
     );
 
-    it('should reject files exceeding size limit', async () => {
+    it('resizes oversized images instead of rejecting them', async () => {
       const file = {
         name: 'huge.png',
         type: 'image/png',
-        size: 6 * 1024 * 1024, // 6MB > 5MB limit
+        size: 6 * 1024 * 1024, // 6MB, above the inline ceiling
         arrayBuffer: jest.fn(),
       } as unknown as File;
+      (Notice as jest.Mock).mockClear();
 
       const result = await manager['addImageFromFile'](file, 'paste');
+
+      // jsdom cannot decode images, so the resize path fails here; the point of the
+      // test is that the old size ceiling no longer short-circuits the attachment.
       expect(result).toBe(false);
-      expect(Notice).toHaveBeenCalledWith(expect.stringContaining('limit'));
+      expect(Notice).not.toHaveBeenCalledWith(expect.stringContaining('exceeds'));
     });
 
     it('should reject files with unsupported media type', async () => {

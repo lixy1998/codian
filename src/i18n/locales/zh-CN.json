@@ -30,7 +30,7 @@
   "chat": {
     "drop": {
       "context": "拖放以添加上下文",
-      "invalid": "未找到支持的库内笔记或文件夹。",
+      "invalid": "未找到支持的文件或文件夹。",
       "removedUnavailable": "已移除不可用上下文：{path}"
     },
     "providerRetry": "Claude API 正在重试（第 {attempt}/{maxRetries} 次；原因：{reason}）。",
@@ -213,6 +213,7 @@
       "placeholder": "请求修改、@提及文件、运行 /命令",
       "message": "消息",
       "dropImage": "将图片拖到这里",
+      "dropFile": "将图片或文件拖到这里",
       "moreContext": "显示另外 {count} 项上下文",
       "showLess": "收起",
       "moreItems": "+{count} 项"
@@ -432,6 +433,13 @@
       "permissionDenied": "{message}（无访问权限）",
       "preview": "图片预览：{name}",
       "closePreview": "关闭图片预览"
+    },
+    "documents": {
+      "attachment": "文件附件：{name} · {size}",
+      "truncated": "内容已截断",
+      "budgetExhausted": "单轮附件额度已用完，请先发送或移除部分文件。",
+      "pathUnavailable": "无法获取「{name}」的文件路径，不能作为附件发送。",
+      "attachFailed": "添加文件附件「{name}」失败。"
     },
     "pi": {
       "extension": "Pi 扩展",

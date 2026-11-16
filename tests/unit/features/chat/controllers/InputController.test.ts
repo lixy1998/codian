@@ -49,6 +49,9 @@ function createMockImageContextManager() {
     hasImages: jest.fn().mockReturnValue(false),
     getAttachedImages: jest.fn().mockReturnValue([]),
     clearImages: jest.fn(),
+    hasDocuments: jest.fn().mockReturnValue(false),
+    getAttachedDocuments: jest.fn().mockReturnValue([]),
+    clearDocuments: jest.fn(),
     setImages: jest.fn(),
   };
 }

@@ -218,6 +218,7 @@
       "placeholder": "Änderungen anfragen, Dateien mit @ erwähnen, /Befehle ausführen",
       "message": "Nachricht",
       "dropImage": "Bild hier ablegen",
+      "dropFile": "Bild oder Datei hier ablegen",
       "moreContext": "{count} weitere Kontextelemente anzeigen",
       "showLess": "Weniger anzeigen",
       "moreItems": "+{count} weitere"
@@ -432,6 +433,13 @@
       "permissionDenied": "{message} (Zugriff verweigert)",
       "preview": "Bildvorschau: {name}",
       "closePreview": "Bildvorschau schließen"
+    },
+    "documents": {
+      "attachment": "Dateianhang: {name} · {size}",
+      "truncated": "Inhalt gekürzt",
+      "budgetExhausted": "Das Anhangslimit für eine Nachricht ist erreicht. Senden oder entfernen Sie zuerst eine Datei.",
+      "pathUnavailable": "Der Dateipfad von „{name}“ lässt sich nicht auflösen, daher kann die Datei nicht angehängt werden.",
+      "attachFailed": "Anhängen von „{name}“ fehlgeschlagen."
     },
     "pi": {
       "extension": "Pi-Erweiterung",

@@ -30,7 +30,7 @@
   "chat": {
     "drop": {
       "context": "Drop to add context",
-      "invalid": "No supported vault notes or folders found.",
+      "invalid": "No supported files or folders found.",
       "removedUnavailable": "Removed unavailable context: {path}"
     },
     "providerRetry": "Claude API retrying (attempt {attempt}/{maxRetries}; reason: {reason}).",
@@ -213,6 +213,7 @@
       "placeholder": "Ask to make changes, @mention files, run /commands",
       "message": "Message",
       "dropImage": "Drop image here",
+      "dropFile": "Drop images or files here",
       "moreContext": "Show {count} more context items",
       "showLess": "Show less",
       "moreItems": "+{count} more"
@@ -432,6 +433,13 @@
       "permissionDenied": "{message} (Permission denied)",
       "preview": "Image preview: {name}",
       "closePreview": "Close image preview"
+    },
+    "documents": {
+      "attachment": "File attachment: {name} · {size}",
+      "truncated": "content clipped",
+      "budgetExhausted": "Attachment budget for one message is used up. Send or remove a file first.",
+      "pathUnavailable": "Cannot resolve the file path of \"{name}\", so it cannot be attached.",
+      "attachFailed": "Failed to attach \"{name}\"."
     },
     "pi": {
       "extension": "Pi extension",

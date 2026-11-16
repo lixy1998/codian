@@ -27,6 +27,27 @@ export interface ImageAttachment {
   source: 'file' | 'paste' | 'drop';
 }
 
+/**
+ * Non-image attachment dropped onto, or picked for, the composer.
+ *
+ * Text-like files carry their decoded content so every provider receives the
+ * same prompt payload; binary formats keep only the path and are expected to be
+ * opened by the agent's own file tools.
+ */
+export interface DocumentAttachment {
+  id: string;
+  name: string;
+  /** Absolute filesystem path when the file lives outside the vault. */
+  path?: string;
+  mediaType: string;
+  size: number;
+  /** Decoded UTF-8 text for text-like files, null when external tooling is needed. */
+  text: string | null;
+  /** True when the decoded text exceeded the read budget and was clipped. */
+  truncated?: boolean;
+  source: 'file' | 'drop';
+}
+
 export interface CitationEntry {
   path: string;
   lineStart: number;

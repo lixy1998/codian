@@ -152,9 +152,38 @@ describe('VaultContextDropController', () => {
     controller.destroy();
   });
 
-  it('reports an internal vault drag when every item is unsupported', () => {
+  it('references dropped vault files regardless of extension', () => {
     const app = {
       dragManager: { draggable: { type: 'file', file: createVaultFile('assets/manual.pdf') } },
+    } as any;
+    const dropZone = createMockEl();
+    const input = createInput('', 0);
+    const onReferencesDropped = jest.fn();
+    const controller = new VaultContextDropController(app, dropZone, input, {
+      onReferencesDropped,
+      onInvalidDrop: jest.fn(),
+    });
+    const event = {
+      type: 'drop',
+      preventDefault: jest.fn(),
+      stopImmediatePropagation: jest.fn(),
+      dataTransfer: { files: [] },
+    };
+
+    dropZone.dispatchEvent(event);
+
+    expect(input.value).toBe('@assets/manual.pdf ');
+    expect(onReferencesDropped).toHaveBeenCalledWith([
+      { path: 'assets/manual.pdf', kind: 'file' },
+    ]);
+    expect(event.preventDefault).toHaveBeenCalled();
+
+    controller.destroy();
+  });
+
+  it('reports an internal vault drag when every item is an image', () => {
+    const app = {
+      dragManager: { draggable: { type: 'file', file: createVaultFile('assets/photo.png') } },
     } as any;
     const dropZone = createMockEl();
     const input = createInput('', 0);

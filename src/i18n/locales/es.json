@@ -218,6 +218,7 @@
       "placeholder": "Pide cambios, menciona archivos con @, ejecuta /comandos",
       "message": "Mensaje",
       "dropImage": "Suelta una imagen aquí",
+      "dropFile": "Suelta una imagen o un archivo aquí",
       "moreContext": "Mostrar {count} elementos de contexto más",
       "showLess": "Mostrar menos",
       "moreItems": "+{count} más"
@@ -432,6 +433,13 @@
       "permissionDenied": "{message} (Permiso denegado)",
       "preview": "Vista previa de imagen: {name}",
       "closePreview": "Cerrar vista previa de imagen"
+    },
+    "documents": {
+      "attachment": "Archivo adjunto: {name} · {size}",
+      "truncated": "contenido recortado",
+      "budgetExhausted": "Se agotó el cupo de adjuntos por mensaje. Envía o elimina un archivo primero.",
+      "pathUnavailable": "No se puede resolver la ruta de «{name}», así que no se puede adjuntar.",
+      "attachFailed": "No se pudo adjuntar «{name}»."
     },
     "pi": {
       "extension": "Extensión Pi",

@@ -218,6 +218,7 @@
       "placeholder": "変更を依頼、@でファイルを指定、/コマンドを実行",
       "message": "メッセージ",
       "dropImage": "ここに画像をドロップ",
+      "dropFile": "ここに画像またはファイルをドロップ",
       "moreContext": "他 {count} 件のコンテキストを表示",
       "showLess": "折りたたむ",
       "moreItems": "他 {count} 件"
@@ -432,6 +433,13 @@
       "permissionDenied": "{message}（アクセスが拒否されました）",
       "preview": "画像プレビュー：{name}",
       "closePreview": "画像プレビューを閉じる"
+    },
+    "documents": {
+      "attachment": "ファイル添付：{name} · {size}",
+      "truncated": "内容は切り詰められました",
+      "budgetExhausted": "1 回のメッセージの添付上限に達しました。先に送信するか、ファイルを削除してください。",
+      "pathUnavailable": "「{name}」のファイルパスを取得できないため、添付できません。",
+      "attachFailed": "ファイル「{name}」の添付に失敗しました。"
     },
     "pi": {
       "extension": "Pi 拡張機能",

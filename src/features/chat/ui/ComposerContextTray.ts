@@ -14,9 +14,10 @@ export type ComposerContextSlot =
   | 'canvas-selection'
   | 'chat-selection'
   | 'vault-references'
+  | 'files'
   | 'images';
 
-export type ComposerContextItemKind = 'note' | 'folder' | 'selection' | 'image';
+export type ComposerContextItemKind = 'note' | 'folder' | 'selection' | 'image' | 'file';
 
 export interface ComposerContextItem {
   id: string;
@@ -40,6 +41,7 @@ const SLOT_ORDER: readonly ComposerContextSlot[] = [
   'canvas-selection',
   'chat-selection',
   'vault-references',
+  'files',
   'images',
 ];
 

@@ -15,6 +15,9 @@ interface DragManagerHost {
   dragManager?: unknown;
 }
 
+/** Images are left to the composer attachment pipeline instead of becoming path mentions. */
+const IMAGE_EXTENSIONS = new Set(['avif', 'bmp', 'gif', 'jpeg', 'jpg', 'png', 'svg', 'webp']);
+
 export class VaultContextDropController {
   private readonly dropOverlayEl: HTMLElement;
 
@@ -107,7 +110,7 @@ export class VaultContextDropController {
     for (const item of this.getDraggedItems()) {
       const reference = item instanceof TFolder && item.path !== '/' && item.path !== ''
         ? { path: item.path, kind: 'folder' as const }
-        : item instanceof TFile && item.extension.toLowerCase() === 'md'
+        : item instanceof TFile && !IMAGE_EXTENSIONS.has(item.extension.toLowerCase())
           ? { path: item.path, kind: 'file' as const }
           : null;
       if (!reference || seenPaths.has(reference.path)) continue;

@@ -5,6 +5,8 @@
 */
 
 import { decodeSessionMessage } from '../core/session-tools/sessionMessageEnvelope';
+import type { DocumentAttachment } from '../core/types';
+import { formatAttachmentSize } from './documentAttachment';
 import { escapePromptXmlAttribute, formatPromptXmlCdata } from './promptXml';
 
 const LINKED_NOTE_TAG = 'linked_note';
@@ -24,7 +26,7 @@ const NOTE_CONTEXT_SUFFIX_REGEX = new RegExp(`\\n\\n${NOTE_CONTEXT_BLOCK_PATTERN
  * Matches: linked_note/current_note, editor_selection (with attributes), editor_cursor (with attributes),
  * context_files, canvas_selection, browser_selection
  */
-export const XML_CONTEXT_PATTERN = /\n\n<(?:linked_note|current_note|editor_selection|editor_cursor|context_files|canvas_selection|browser_selection|chat_selection)[\s>]/;
+export const XML_CONTEXT_PATTERN = /\n\n<(?:linked_note|current_note|editor_selection|editor_cursor|context_files|attached_files|canvas_selection|browser_selection|chat_selection)[\s>]/;
 const BRACKET_CONTEXT_PATTERN = /\n\[(?:Current note|Editor selection from|Browser selection from|Canvas selection from|Selected AI reply)\b/;
 
 export function formatCurrentNote(notePath: string): string {
@@ -147,6 +149,7 @@ export function extractUserQuery(prompt: string): string {
     .replace(/<editor_selection[\s\S]*?<\/editor_selection>\s*/g, '')
     .replace(/<editor_cursor[\s\S]*?<\/editor_cursor>\s*/g, '')
     .replace(/<context_files>[\s\S]*?<\/context_files>\s*/g, '')
+    .replace(/<attached_files>[\s\S]*?<\/attached_files>\s*/g, '')
     .replace(/<canvas_selection[\s\S]*?<\/canvas_selection>\s*/g, '')
     .replace(/<browser_selection[\s\S]*?<\/browser_selection>\s*/g, '')
     .replace(/<chat_selection>[\s\S]*?<\/chat_selection>\s*/g, '')
@@ -162,4 +165,39 @@ function formatContextFilesLine(files: string[]): string {
 
 export function appendContextFiles(prompt: string, files: string[]): string {
   return `${prompt}\n\n${formatContextFilesLine(files)}`;
+}
+
+function formatAttachedDocument(document: DocumentAttachment): string {
+  const attributes = [
+    `name="${escapePromptXmlAttribute(document.name)}"`,
+    document.path ? `path="${escapePromptXmlAttribute(document.path)}"` : null,
+    `media_type="${escapePromptXmlAttribute(document.mediaType)}"`,
+    `size="${escapePromptXmlAttribute(formatAttachmentSize(document.size))}"`,
+    document.truncated ? 'truncated="true"' : null,
+    document.text === null
+      ? 'note="binary attachment; open it with your own file tools before answering"'
+      : null,
+  ].filter((attribute): attribute is string => attribute !== null);
+
+  if (document.text === null) {
+    return `<file ${attributes.join(' ')} />`;
+  }
+  return `<file ${attributes.join(' ')}>\n${formatPromptXmlCdata(document.text)}\n</file>`;
+}
+
+/**
+ * Appends dropped documents to a prompt.
+ *
+ * Text attachments travel inline so providers without a document channel still
+ * receive the content; binary ones carry only their path.
+ */
+export function appendAttachedDocuments(
+  prompt: string,
+  documents: readonly DocumentAttachment[] | undefined,
+): string {
+  const entries = (documents ?? [])
+    .filter(document => document.text !== null || Boolean(document.path))
+    .map(formatAttachedDocument);
+  if (entries.length === 0) return prompt;
+  return `${prompt}\n\n<attached_files>\n${entries.join('\n')}\n</attached_files>`;
 }
