@@ -441,6 +441,10 @@
       "pathUnavailable": "Impossible de résoudre le chemin du fichier « {name} », il ne peut pas être joint.",
       "attachFailed": "Échec de l’ajout de « {name} »."
     },
+    "contextRefs": {
+      "line": "ligne {line}",
+      "lines": "lignes {start}–{end}"
+    },
     "pi": {
       "extension": "Extension Pi",
       "notification": "Notification de l’extension Pi."

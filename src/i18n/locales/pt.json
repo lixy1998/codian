@@ -441,6 +441,10 @@
       "pathUnavailable": "Não é possível resolver o caminho de \"{name}\", então ele não pode ser anexado.",
       "attachFailed": "Falha ao anexar \"{name}\"."
     },
+    "contextRefs": {
+      "line": "linha {line}",
+      "lines": "linhas {start}–{end}"
+    },
     "pi": {
       "extension": "Extensão Pi",
       "notification": "Notificação da extensão Pi."

@@ -441,6 +441,10 @@
       "pathUnavailable": "No se puede resolver la ruta de «{name}», así que no se puede adjuntar.",
       "attachFailed": "No se pudo adjuntar «{name}»."
     },
+    "contextRefs": {
+      "line": "línea {line}",
+      "lines": "líneas {start}–{end}"
+    },
     "pi": {
       "extension": "Extensión Pi",
       "notification": "Notificación de la extensión Pi."

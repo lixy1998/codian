@@ -10,6 +10,7 @@ export {
   type ForkSource,
   type ImageAttachment,
   type ImageMediaType,
+  type MessageContextRef,
   type SessionMetadata,
   type StreamChunk,
   type TurnStats,

@@ -441,6 +441,10 @@
       "pathUnavailable": "无法获取「{name}」的文件路径，不能作为附件发送。",
       "attachFailed": "添加文件附件「{name}」失败。"
     },
+    "contextRefs": {
+      "line": "第 {line} 行",
+      "lines": "第 {start}–{end} 行"
+    },
     "pi": {
       "extension": "Pi 扩展",
       "notification": "Pi 扩展通知。"

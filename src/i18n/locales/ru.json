@@ -441,6 +441,10 @@
       "pathUnavailable": "Не удаётся определить путь к «{name}», поэтому файл нельзя прикрепить.",
       "attachFailed": "Не удалось прикрепить «{name}»."
     },
+    "contextRefs": {
+      "line": "строка {line}",
+      "lines": "строки {start}–{end}"
+    },
     "pi": {
       "extension": "Расширение Pi",
       "notification": "Уведомление расширения Pi."

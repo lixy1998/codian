@@ -149,6 +149,85 @@
   color: var(--text-normal);
 }
 
+.codian-sent-contexts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.codian-sent-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 20em;
+  padding: 2px 8px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+
+.codian-sent-context.is-expandable {
+  cursor: pointer;
+}
+
+.codian-sent-context.is-expandable:hover,
+.codian-sent-context.is-open {
+  border-color: var(--interactive-accent);
+  color: var(--text-normal);
+}
+
+.codian-sent-context-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.codian-sent-context-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.codian-sent-context-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.codian-sent-context-detail {
+  flex-shrink: 0;
+  opacity: 0.75;
+}
+
+.codian-sent-context-body {
+  display: none;
+  flex-basis: 100%;
+  margin: 2px 0 6px;
+  padding: 6px 9px;
+  max-height: 16em;
+  overflow: auto;
+  border-left: 2px solid var(--background-modifier-border);
+  color: var(--text-normal);
+  font-size: var(--font-ui-smaller);
+}
+
+.codian-sent-context-body.is-open {
+  display: block;
+}
+
+.codian-sent-context-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.codian-sent-context-path {
+  margin-top: 4px;
+  color: var(--text-faint);
+  word-break: break-all;
+}
+
 .codian-sent-chat-selections {
   display: flex;
   flex-wrap: wrap;

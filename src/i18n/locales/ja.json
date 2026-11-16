@@ -441,6 +441,10 @@
       "pathUnavailable": "「{name}」のファイルパスを取得できないため、添付できません。",
       "attachFailed": "ファイル「{name}」の添付に失敗しました。"
     },
+    "contextRefs": {
+      "line": "{line} 行目",
+      "lines": "{start}–{end} 行目"
+    },
     "pi": {
       "extension": "Pi 拡張機能",
       "notification": "Pi 拡張機能の通知。"

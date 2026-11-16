@@ -20,12 +20,14 @@ import type {
   ChatMessage,
   ContentBlock,
   ImageAttachment,
+  MessageContextRef,
   SubagentInfo,
   ToolCallInfo,
 } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
 import { getUserDisplayText } from '../../../utils/context';
 import { formatDurationMmSs } from '../../../utils/date';
+import { formatAttachmentSize } from '../../../utils/documentAttachment';
 import { processFileLinks, registerFileLinkHandler } from '../../../utils/fileLink';
 import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { stripLegacyInterruptIndicator } from '../../../utils/interrupt';
@@ -278,6 +280,7 @@ export class MessageRenderer {
         senderEl.createSpan({ text: t('chat.sessionMessage.fromLabel') });
         createSessionLink(senderEl, { sessionId, text: from });
       }
+      this.renderContextRefs(contentEl, msg);
       this.renderChatSelectionChips(contentEl, msg);
       const textToShow = this.getUserMessageTextToShow(msg);
       if (textToShow) {
@@ -420,6 +423,7 @@ export class MessageRenderer {
         senderEl.createSpan({ text: t('chat.sessionMessage.fromLabel') });
         createSessionLink(senderEl, { sessionId, text: from });
       }
+      this.renderContextRefs(contentEl, msg);
       this.renderChatSelectionChips(contentEl, msg);
       const textToShow = this.getUserMessageTextToShow(msg);
       if (textToShow) {
@@ -461,6 +465,71 @@ export class MessageRenderer {
     }
     if (msg.toolCalls?.some(toolCall => this.shouldRenderToolCall(toolCall, msg))) return true;
     return false;
+  }
+
+  private renderContextRefs(contentEl: HTMLElement, msg: ChatMessage): void {
+    if (!msg.contextRefs?.length) return;
+
+    const wrapEl = contentEl.createDiv({ cls: 'codian-sent-contexts' });
+
+    for (const ref of msg.contextRefs) {
+      const chipEl = wrapEl.createDiv({ cls: `codian-sent-context codian-sent-context--${ref.kind}` });
+      const iconEl = chipEl.createSpan({ cls: 'codian-sent-context-icon' });
+      setIcon(iconEl, this.contextRefIcon(ref));
+      chipEl.createSpan({ cls: 'codian-sent-context-label', text: ref.label });
+
+      const detail = this.describeContextRef(ref);
+      if (detail) {
+        chipEl.createSpan({ cls: 'codian-sent-context-detail', text: detail });
+      }
+      if (ref.path) {
+        chipEl.setAttribute('title', ref.path);
+      }
+
+      if (!ref.excerpt) continue;
+
+      // The excerpt is the point of the chip: reveal it in place instead of a modal.
+      chipEl.addClass('is-expandable');
+      chipEl.setAttribute('role', 'button');
+      chipEl.setAttribute('tabindex', '0');
+      chipEl.setAttribute('aria-expanded', 'false');
+
+      const bodyEl = wrapEl.createDiv({ cls: 'codian-sent-context-body' });
+      bodyEl.createDiv({ cls: 'codian-sent-context-text', text: ref.excerpt });
+      if (ref.path) bodyEl.createDiv({ cls: 'codian-sent-context-path', text: ref.path });
+
+      let open = false;
+      const toggle = () => {
+        open = !open;
+        bodyEl.toggleClass('is-open', open);
+        chipEl.toggleClass('is-open', open);
+        chipEl.setAttribute('aria-expanded', String(open));
+      };
+      chipEl.addEventListener('click', toggle);
+      chipEl.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        toggle();
+      });
+    }
+  }
+
+  private contextRefIcon(ref: MessageContextRef): string {
+    if (ref.kind === 'selection') return 'text-select';
+    if (ref.kind === 'document') return 'paperclip';
+    return 'file-text';
+  }
+
+  private describeContextRef(ref: MessageContextRef): string {
+    if (ref.kind === 'selection' && ref.lines) {
+      return ref.lines.start === ref.lines.end
+        ? t('chat.contextRefs.line', { line: ref.lines.start })
+        : t('chat.contextRefs.lines', { start: ref.lines.start, end: ref.lines.end });
+    }
+    if (ref.kind === 'document' && ref.size !== undefined) {
+      return formatAttachmentSize(ref.size);
+    }
+    return '';
   }
 
   private renderChatSelectionChips(contentEl: HTMLElement, msg: ChatMessage): void {

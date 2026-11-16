@@ -5,7 +5,7 @@ import * as path from 'path';
 
 export function getVaultPath(app: App): string | null {
   // `vault` is absent on partially built app doubles and during early startup.
-  const basePath = (app.vault?.adapter as { basePath?: unknown } | undefined)?.basePath;
+  const basePath = (app?.vault?.adapter as { basePath?: unknown } | undefined)?.basePath;
   return typeof basePath === 'string' ? basePath : null;
 }
 

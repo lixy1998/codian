@@ -441,6 +441,10 @@
       "pathUnavailable": "Der Dateipfad von „{name}“ lässt sich nicht auflösen, daher kann die Datei nicht angehängt werden.",
       "attachFailed": "Anhängen von „{name}“ fehlgeschlagen."
     },
+    "contextRefs": {
+      "line": "Zeile {line}",
+      "lines": "Zeilen {start}–{end}"
+    },
     "pi": {
       "extension": "Pi-Erweiterung",
       "notification": "Benachrichtigung der Pi-Erweiterung."

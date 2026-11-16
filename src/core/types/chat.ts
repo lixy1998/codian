@@ -79,6 +79,23 @@ export type ContentBlock =
   | ({ type: 'task_notification'; content: string } & BlockTiming);
 
 /** Chat message with content, tool calls, and attachments. */
+/**
+ * A context source a user turn quoted: the current note, an editor selection or
+ * a dropped document. Rendered above the bubble so the turn stays auditable.
+ */
+export interface MessageContextRef {
+  kind: 'note' | 'selection' | 'document';
+  /** Short name shown on the chip. */
+  label: string;
+  path?: string;
+  /** 1-indexed line range, for selections. */
+  lines?: { start: number; end: number };
+  /** Byte size, for documents. */
+  size?: number;
+  /** Expandable original text, clipped for storage. */
+  excerpt?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -90,6 +107,8 @@ export interface ChatMessage {
   contentBlocks?: ContentBlock[];
   currentNote?: string;
   images?: ImageAttachment[];
+  /** Context sources quoted by this turn, shown above the bubble text. */
+  contextRefs?: MessageContextRef[];
   /** Selected assistant-reply context attached to this user turn. */
   chatSelections?: Array<{ id: string; text: string }>;
   /** Sender info if this message was sent from another Codian session. */

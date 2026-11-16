@@ -441,6 +441,10 @@
       "pathUnavailable": "Cannot resolve the file path of \"{name}\", so it cannot be attached.",
       "attachFailed": "Failed to attach \"{name}\"."
     },
+    "contextRefs": {
+      "line": "line {line}",
+      "lines": "lines {start}–{end}"
+    },
     "pi": {
       "extension": "Pi extension",
       "notification": "Pi extension notification."

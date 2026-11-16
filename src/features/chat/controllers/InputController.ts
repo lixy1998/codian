@@ -45,6 +45,7 @@ import { appendAttachedDocuments, extractUserDisplayContent } from '../../../uti
 import { formatDurationMmSs } from '../../../utils/date';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
+import { buildMessageContextRefs } from '../../../utils/messageContext';
 import { resolveVaultPath } from '../../../utils/path';
 import type { FeatureHost } from '../../FeatureHost';
 import { COMPLETION_FLAVOR_WORDS } from '../constants';
@@ -511,6 +512,11 @@ export class InputController {
       displayContent,                // Original user input (for UI display)
       timestamp: Date.now(),
       images: imagesForMessage,
+      contextRefs: buildMessageContextRefs({
+        currentNotePath: turnRequest.currentNotePath,
+        editorSelection: turnRequest.editorSelection,
+        documents,
+      }),
       chatSelections: turnRequest.chatSelections,
       sessionMessage: options?.sessionMessageMetadata,
     };

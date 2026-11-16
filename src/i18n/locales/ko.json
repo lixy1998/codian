@@ -441,6 +441,10 @@
       "pathUnavailable": "\"{name}\" 파일 경로를 확인할 수 없어 첨부할 수 없습니다.",
       "attachFailed": "\"{name}\" 파일 첨부에 실패했습니다."
     },
+    "contextRefs": {
+      "line": "{line}행",
+      "lines": "{start}–{end}행"
+    },
     "pi": {
       "extension": "Pi 확장",
       "notification": "Pi 확장 알림."
