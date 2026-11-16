@@ -1,8 +1,10 @@
-import type { App } from 'obsidian';
+import type { App, TFile } from 'obsidian';
 import { FileView, MarkdownView, TextFileView } from 'obsidian';
 
 import { hideSelectionHighlight, showSelectionHighlight } from '../../../shared/components/SelectionHighlight';
-import { type EditorSelectionContext, getEditorView } from '../../../utils/editor';
+import { isTextDocumentName } from '../../../utils/documentAttachment';
+import { buildNoteExcerpt, type EditorSelectionContext, getEditorView } from '../../../utils/editor';
+import { resolveVaultPath } from '../../../utils/path';
 import type { StoredSelection } from '../state/types';
 import type { ComposerContextTray } from '../ui/ComposerContextTray';
 
@@ -24,6 +26,8 @@ export class SelectionController {
   private focusScopeEls: HTMLElement[];
   private onVisibilityChange: (() => void) | null;
   private storedSelection: StoredSelection | null = null;
+  /** Identity of the excerpt currently being read, so a stale read can be dropped. */
+  private noteExcerptKey = '';
   private inputHandoffGraceUntil: number | null = null;
   private pollInterval: number | null = null;
   private readonly focusScopePointerDownHandler = () => {
@@ -136,8 +140,18 @@ export class SelectionController {
         if (s && !sameRange) {
           this.clearHighlight();
         }
-        this.storedSelection = { notePath, selectedText, lineCount, startLine, from, to, editorView };
+        this.storedSelection = {
+          notePath,
+          selectedText,
+          lineCount,
+          startLine,
+          from,
+          to,
+          editorView,
+          noteAbsolutePath: this.resolveAbsolutePath(notePath),
+        };
         this.updateIndicator();
+        this.refreshNoteExcerpt(view.file, notePath, startLine, lineCount);
       }
     } else {
       this.handleDeselection();
@@ -186,8 +200,10 @@ export class SelectionController {
           lineCount,
           domRanges,
           ...(startLine !== undefined && { startLine }),
+          noteAbsolutePath: this.resolveAbsolutePath(notePath),
         };
         this.updateIndicator();
+        this.refreshNoteExcerpt(view.file, notePath, startLine, lineCount);
       }
     } else {
       this.handleDeselection();
@@ -456,11 +472,51 @@ export class SelectionController {
     if (!this.storedSelection) return null;
     return {
       notePath: this.storedSelection.notePath,
+      noteAbsolutePath: this.storedSelection.noteAbsolutePath,
       mode: 'selection',
       selectedText: this.storedSelection.selectedText,
       lineCount: this.storedSelection.lineCount,
       ...(this.storedSelection.startLine !== undefined && { startLine: this.storedSelection.startLine }),
+      ...(this.storedSelection.noteExcerpt && { noteExcerpt: this.storedSelection.noteExcerpt }),
     };
+  }
+
+  /**
+   * Loads the host note text around the selection.
+   *
+   * Providers otherwise receive only a vault-relative path, which forces the
+   * agent into a search-and-open round trip before it can answer.
+   */
+  private refreshNoteExcerpt(
+    file: TFile | null,
+    notePath: string,
+    startLine: number | undefined,
+    lineCount: number | undefined,
+  ): void {
+    if (!file || !isTextDocumentName(file.name)) return;
+
+    const key = `${notePath}:${startLine ?? 0}:${lineCount ?? 1}:${file.stat.mtime}`;
+    if (this.noteExcerptKey === key) return;
+    this.noteExcerptKey = key;
+
+    void this.app.vault.cachedRead(file)
+      .then((content) => {
+        if (this.noteExcerptKey !== key) return;
+        const current = this.storedSelection;
+        if (!current || current.notePath !== notePath) return;
+        this.storedSelection = {
+          ...current,
+          noteExcerpt: buildNoteExcerpt(content, startLine, lineCount),
+        };
+      })
+      .catch(() => {
+        // The excerpt is additive; a read failure just leaves the path-only context.
+      });
+  }
+
+  private resolveAbsolutePath(notePath: string): string | undefined {
+    if (notePath === 'unknown') return undefined;
+    return resolveVaultPath(this.app, notePath);
   }
 
   hasSelection(): boolean {
@@ -473,6 +529,7 @@ export class SelectionController {
 
   clear(): void {
     this.inputHandoffGraceUntil = null;
+    this.noteExcerptKey = '';
     this.clearHighlight();
     this.storedSelection = null;
     this.updateIndicator();

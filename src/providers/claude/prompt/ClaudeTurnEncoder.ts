@@ -19,7 +19,7 @@ export function encodeClaudeTurn(
   let persistedContent = request.text;
   if (!isCompact) {
     if (request.currentNotePath) {
-      persistedContent = appendCurrentNote(persistedContent, request.currentNotePath);
+      persistedContent = appendCurrentNote(persistedContent, request.currentNotePath, request.currentNoteAbsolutePath);
     }
 
     if (request.editorSelection) {

@@ -1078,7 +1078,7 @@ function permissionFor(input: ProviderExecutionRequest): DeepSeekPermission {
 function encodeInput(input: ProviderExecutionRequest): unknown[] {
   let text = input.input.filter(block => block.type === 'text').map(block => block.text).join('\n');
   const linked = input.context?.linkedContent;
-  if (linked) text = linked.content === undefined ? appendLinkedContent(text, linked.path) : appendLinkedContentBody(text, linked.path, linked.content);
+  if (linked) text = linked.content === undefined ? appendLinkedContent(text, linked.path, linked.fullPath) : appendLinkedContentBody(text, linked.path, linked.content);
   text = appendSessionReferences(appendSelectionContexts(text, input.context), input.context?.sessionReferences);
   return [{ type: 'text', text }, ...input.input.flatMap(block => block.type === 'image' ? [{ type: 'image', mediaType: block.image.mediaType, data: block.image.data, name: block.image.name }] : [])];
 }

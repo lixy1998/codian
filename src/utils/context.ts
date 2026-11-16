@@ -26,15 +26,18 @@ const NOTE_CONTEXT_SUFFIX_REGEX = new RegExp(`\\n\\n${NOTE_CONTEXT_BLOCK_PATTERN
  * Matches: linked_note/current_note, editor_selection (with attributes), editor_cursor (with attributes),
  * context_files, canvas_selection, browser_selection
  */
-export const XML_CONTEXT_PATTERN = /\n\n<(?:linked_note|current_note|editor_selection|editor_cursor|context_files|attached_files|canvas_selection|browser_selection|chat_selection)[\s>]/;
+export const XML_CONTEXT_PATTERN = /\n\n<(?:linked_note|current_note|editor_selection|editor_note|editor_cursor|context_files|attached_files|canvas_selection|browser_selection|chat_selection)[\s>]/;
 const BRACKET_CONTEXT_PATTERN = /\n\[(?:Current note|Editor selection from|Browser selection from|Canvas selection from|Selected AI reply)\b/;
 
-export function formatCurrentNote(notePath: string): string {
-  return `<${LINKED_NOTE_TAG} path="${escapePromptXmlAttribute(notePath)}" />`;
+export function formatCurrentNote(notePath: string, absolutePath?: string): string {
+  const absoluteAttr = absolutePath
+    ? ` full_path="${escapePromptXmlAttribute(absolutePath)}"`
+    : '';
+  return `<${LINKED_NOTE_TAG} path="${escapePromptXmlAttribute(notePath)}"${absoluteAttr} />`;
 }
 
-export function appendCurrentNote(prompt: string, notePath: string): string {
-  return `${prompt}\n\n${formatCurrentNote(notePath)}`;
+export function appendCurrentNote(prompt: string, notePath: string, absolutePath?: string): string {
+  return `${prompt}\n\n${formatCurrentNote(notePath, absolutePath)}`;
 }
 
 export function formatCurrentNoteContent(notePath: string, content: string): string {
@@ -147,6 +150,7 @@ export function extractUserQuery(prompt: string): string {
     .replace(/<(?:linked_note|current_note)(?:\s[^>]*)?\s*\/>\s*/g, '')
     .replace(/<(linked_note|current_note)(?:\s[^>]*)?>[\s\S]*?<\/\1>\s*/g, '')
     .replace(/<editor_selection[\s\S]*?<\/editor_selection>\s*/g, '')
+    .replace(/<editor_note[\s\S]*?<\/editor_note>\s*/g, '')
     .replace(/<editor_cursor[\s\S]*?<\/editor_cursor>\s*/g, '')
     .replace(/<context_files>[\s\S]*?<\/context_files>\s*/g, '')
     .replace(/<attached_files>[\s\S]*?<\/attached_files>\s*/g, '')

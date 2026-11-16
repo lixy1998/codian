@@ -11,7 +11,7 @@ import type {
 } from '../../../core/types';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import type { CanvasSelectionContext } from '../../../utils/canvas';
-import type { EditorSelectionContext } from '../../../utils/editor';
+import type { EditorSelectionContext, NoteExcerpt } from '../../../utils/editor';
 import type { ProcessGroupState } from '../rendering/ProcessGroupRenderer';
 import type { ThinkingBlockState } from '../rendering/ThinkingBlockRenderer';
 import type { WriteEditState } from '../rendering/WriteEditRenderer';
@@ -54,6 +54,10 @@ export interface StoredSelection {
   to?: number;
   editorView?: EditorView;
   domRanges?: Range[];
+  /** Absolute path of the host note, resolved once when the selection is captured. */
+  noteAbsolutePath?: string;
+  /** Host note text around the selection; filled in asynchronously after capture. */
+  noteExcerpt?: NoteExcerpt;
 }
 
 /** Centralized chat state data. */

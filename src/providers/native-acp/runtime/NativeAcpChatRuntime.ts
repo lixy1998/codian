@@ -28,7 +28,10 @@ import type {
   SlashCommand,
   StreamChunk,
 } from '../../../core/types';
-import { appendChatSelections } from '../../../utils/context';
+import { appendBrowserContext } from '../../../utils/browser';
+import { appendCanvasContext } from '../../../utils/canvas';
+import { appendChatSelections, appendCurrentNote } from '../../../utils/context';
+import { appendEditorContext } from '../../../utils/editor';
 import { getEnhancedPath, parseEnvironmentVariables } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
 import {
@@ -81,7 +84,22 @@ export class NativeAcpChatRuntime implements ChatRuntime {
   }
 
   prepareTurn(request: ChatTurnRequest): PreparedChatTurn {
-    const prompt = appendChatSelections(request.text, request.chatSelections);
+    let prompt = request.text;
+
+    if (request.currentNotePath) {
+      prompt = appendCurrentNote(prompt, request.currentNotePath, request.currentNoteAbsolutePath);
+    }
+    if (request.editorSelection && request.editorSelection.mode !== 'none') {
+      prompt = appendEditorContext(prompt, request.editorSelection);
+    }
+    if (request.browserSelection) {
+      prompt = appendBrowserContext(prompt, request.browserSelection);
+    }
+    if (request.canvasSelection) {
+      prompt = appendCanvasContext(prompt, request.canvasSelection);
+    }
+
+    prompt = appendChatSelections(prompt, request.chatSelections);
     return {
       request,
       persistedContent: prompt,

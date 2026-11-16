@@ -50,6 +50,8 @@ export interface ChatTurnRequest {
   chatSelections?: ChatSelectionContext[];
   images?: ImageAttachment[];
   currentNotePath?: string;
+  /** Absolute path of the current note, so providers can open it without searching. */
+  currentNoteAbsolutePath?: string;
   editorSelection?: EditorSelectionContext | null;
   browserSelection?: BrowserSelectionContext | null;
   canvasSelection?: CanvasSelectionContext | null;

@@ -4,8 +4,16 @@ import * as os from 'os';
 import * as path from 'path';
 
 export function getVaultPath(app: App): string | null {
-  const basePath = (app.vault.adapter as { basePath?: unknown } | undefined)?.basePath;
+  // `vault` is absent on partially built app doubles and during early startup.
+  const basePath = (app.vault?.adapter as { basePath?: unknown } | undefined)?.basePath;
   return typeof basePath === 'string' ? basePath : null;
+}
+
+/** Resolves a vault-relative path against the vault root, or undefined when unavailable. */
+export function resolveVaultPath(app: App, relativePath: string): string | undefined {
+  const vaultPath = getVaultPath(app);
+  if (!vaultPath || !relativePath) return undefined;
+  return path.join(vaultPath, relativePath);
 }
 
 function getEnvValue(key: string): string | undefined {

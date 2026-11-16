@@ -45,6 +45,7 @@ import { appendAttachedDocuments, extractUserDisplayContent } from '../../../uti
 import { formatDurationMmSs } from '../../../utils/date';
 import type { EditorSelectionContext } from '../../../utils/editor';
 import { appendMarkdownSnippet } from '../../../utils/markdown';
+import { resolveVaultPath } from '../../../utils/path';
 import type { FeatureHost } from '../../FeatureHost';
 import { COMPLETION_FLAVOR_WORDS } from '../constants';
 import { type InlineAskQuestionConfig, InlineAskUserQuestion } from '../rendering/InlineAskUserQuestion';
@@ -1075,6 +1076,9 @@ export class InputController {
         text: submittedText,
         images: options.images,
         currentNotePath: shouldSendCurrentNote && currentNotePath ? currentNotePath : undefined,
+        currentNoteAbsolutePath: shouldSendCurrentNote && currentNotePath
+          ? resolveVaultPath(this.deps.plugin.app, currentNotePath)
+          : undefined,
         editorSelection: editorContext,
         browserSelection: browserContext,
         canvasSelection: canvasContext,

@@ -1,6 +1,7 @@
 import {
   appendEditorContext,
   buildCursorContext,
+  buildNoteExcerpt,
   type EditorSelectionContext,
   findNearestNonEmptyLine,
   formatEditorContext,
@@ -258,5 +259,75 @@ describe('appendEditorContext', () => {
       mode: 'none',
     };
     expect(appendEditorContext('Fix this', context)).toBe('Fix this');
+  });
+});
+
+describe('buildNoteExcerpt', () => {
+  it('returns the whole note when it fits the budget', () => {
+    const excerpt = buildNoteExcerpt('line1\nline2\nline3', 2, 1);
+    expect(excerpt).toEqual({
+      content: 'line1\nline2\nline3',
+      startLine: 1,
+      endLine: 3,
+      truncated: false,
+      totalLines: 3,
+    });
+  });
+
+  it('windows a large note around the selection', () => {
+    const lines = Array.from({ length: 400 }, (_, index) => `line ${index + 1} ${'x'.repeat(100)}`);
+    const excerpt = buildNoteExcerpt(lines.join('\n'), 200, 2);
+
+    expect(excerpt?.truncated).toBe(true);
+    expect(excerpt?.totalLines).toBe(400);
+    expect(excerpt?.startLine).toBe(120);
+    expect(excerpt?.endLine).toBe(281);
+    expect(excerpt?.content.split('\n')[0]).toContain('line 120');
+  });
+
+  it('returns undefined for empty content', () => {
+    expect(buildNoteExcerpt('', 1, 1)).toBeUndefined();
+  });
+});
+
+describe('formatEditorContext note context', () => {
+  it('carries the absolute path and the host note excerpt', () => {
+    const context: EditorSelectionContext = {
+      notePath: 'notes/a.md',
+      noteAbsolutePath: 'D:/vault/notes/a.md',
+      mode: 'selection',
+      selectedText: 'picked',
+      startLine: 2,
+      lineCount: 1,
+      noteExcerpt: { content: 'a\nb\nc', startLine: 1, endLine: 3, truncated: false, totalLines: 3 },
+    };
+    const result = formatEditorContext(context);
+
+    expect(result).toContain('<editor_selection path="notes/a.md" full_path="D:/vault/notes/a.md" lines="2-2">');
+    expect(result).toContain('<editor_note path="notes/a.md" full_path="D:/vault/notes/a.md" lines="1-3" total_lines="3">');
+    expect(result).toContain('<![CDATA[a\nb\nc]]>');
+  });
+
+  it('stays selection-only without an excerpt', () => {
+    const context: EditorSelectionContext = {
+      notePath: 'notes/a.md',
+      mode: 'selection',
+      selectedText: 'picked',
+    };
+
+    expect(formatEditorContext(context)).toBe(
+      '<editor_selection path="notes/a.md">\n<![CDATA[picked]]>\n</editor_selection>',
+    );
+  });
+
+  it('marks a truncated excerpt', () => {
+    const context: EditorSelectionContext = {
+      notePath: 'notes/a.md',
+      mode: 'selection',
+      selectedText: 'picked',
+      noteExcerpt: { content: 'body', startLine: 120, endLine: 281, truncated: true, totalLines: 400 },
+    };
+
+    expect(formatEditorContext(context)).toContain('truncated="true"');
   });
 });

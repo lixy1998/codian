@@ -137,7 +137,10 @@ export class DeepSeekChatRuntime implements ChatRuntime {
       input,
       context: {
         linkedContent: turn.request.currentNotePath
-          ? { path: turn.request.currentNotePath }
+          ? {
+            path: turn.request.currentNotePath,
+            fullPath: turn.request.currentNoteAbsolutePath,
+          }
           : undefined,
         editorSelection: turn.request.editorSelection,
         browserSelection: turn.request.browserSelection,

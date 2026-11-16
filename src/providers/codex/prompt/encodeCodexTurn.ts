@@ -23,7 +23,7 @@ export function encodeCodexTurn(request: ChatTurnRequest): PreparedChatTurn {
 
   let prompt = request.text;
   if (request.currentNotePath) {
-    prompt = appendCurrentNote(prompt, request.currentNotePath);
+    prompt = appendCurrentNote(prompt, request.currentNotePath, request.currentNoteAbsolutePath);
   }
 
   if (request.editorSelection && request.editorSelection.mode !== 'none') {

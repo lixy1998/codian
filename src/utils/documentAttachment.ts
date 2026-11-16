@@ -119,7 +119,8 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   yml: 'text/yaml',
 };
 
-export function getDocumentExtension(filename: string): string {
+export function getDocumentExtension(filename: string | null | undefined): string {
+  if (!filename) return '';
   return path.extname(filename).toLowerCase().replace(/^\./, '');
 }
 

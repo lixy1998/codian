@@ -15,6 +15,8 @@ export type ProviderExecutionInputBlock =
 
 export interface ProviderLinkedContentContext {
   readonly path: string;
+  /** Absolute path of the linked content, so the agent can open it without searching. */
+  readonly fullPath?: string;
   readonly content?: string;
 }
 

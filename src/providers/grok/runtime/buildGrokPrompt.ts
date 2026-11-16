@@ -7,7 +7,7 @@ import type { AcpContentBlock } from '../../acp';
 
 export function buildGrokPromptText(request: ChatTurnRequest): string {
   let prompt = request.text;
-  if (request.currentNotePath) prompt = appendCurrentNote(prompt, request.currentNotePath);
+  if (request.currentNotePath) prompt = appendCurrentNote(prompt, request.currentNotePath, request.currentNoteAbsolutePath);
   if (request.editorSelection && request.editorSelection.mode !== 'none') {
     prompt = appendEditorContext(prompt, request.editorSelection);
   }

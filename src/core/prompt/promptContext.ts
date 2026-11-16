@@ -16,15 +16,16 @@ const LINKED_CONTENT_TAG = 'linked_content';
  * Matches: linked_content/linked_note/current_note, editor_selection (with attributes), editor_cursor (with attributes),
  * context_files, canvas_selection, browser_selection
  */
-const XML_CONTEXT_PATTERN = /\n\n<(?:linked_content|linked_note|current_note|editor_selection|editor_cursor|context_files|context_sessions|canvas_selection|browser_selection)[\s>]/;
+const XML_CONTEXT_PATTERN = /\n\n<(?:linked_content|linked_note|current_note|editor_selection|editor_note|editor_cursor|context_files|attached_files|context_sessions|canvas_selection|browser_selection)[\s>]/;
 const BRACKET_CONTEXT_PATTERN = /\n\[(?:Current note|Editor selection from|Browser selection from|Canvas selection from)\b/;
 
-export function formatLinkedContent(contentPath: string): string {
-  return `<${LINKED_CONTENT_TAG} path="${escapePromptXmlAttribute(contentPath)}" />`;
+export function formatLinkedContent(contentPath: string, fullPath?: string): string {
+  const absoluteAttr = fullPath ? ` full_path="${escapePromptXmlAttribute(fullPath)}"` : '';
+  return `<${LINKED_CONTENT_TAG} path="${escapePromptXmlAttribute(contentPath)}"${absoluteAttr} />`;
 }
 
-export function appendLinkedContent(prompt: string, contentPath: string): string {
-  return `${prompt}\n\n${formatLinkedContent(contentPath)}`;
+export function appendLinkedContent(prompt: string, contentPath: string, fullPath?: string): string {
+  return `${prompt}\n\n${formatLinkedContent(contentPath, fullPath)}`;
 }
 
 export function formatLinkedContentBody(contentPath: string, content: string): string {
