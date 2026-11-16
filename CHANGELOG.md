@@ -4,6 +4,32 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.8.0 — 2026-11-16
+
+- **The composer accepts documents, not just images.** Dropping a file used to be a no-op unless it
+  was an image, and anything above 5 MB was refused outright.
+  - Text-like files (markdown, txt, csv, JSON, source code) are decoded inline — UTF-8 with a GBK
+    fallback — and sent as an `<attached_files>` prompt block, so providers without a document
+    channel still receive the content.
+  - Binary formats (PDF, DOCX, XLSX …) keep only their absolute path, flagged for the agent to open
+    with its own file tools.
+  - Any non-image vault file can now be dropped in as a `@path` mention; previously only `.md` was
+    accepted.
+  - Images above the inline ceiling are downscaled (2048 → 900 px, quality 0.9 → 0.7) instead of
+    being rejected.
+- **A selection now carries its note.** Selecting a few lines sent only those lines plus a
+  vault-relative path, so the agent had to locate the file before answering; ACP providers received
+  no selection at all.
+  - `NativeAcpChatRuntime.prepareTurn` now injects the current note, editor selection, browser and
+    canvas context, matching the other providers.
+  - The host note travels next to the selection — whole note under 30k characters, otherwise an
+    80-line window on each side.
+  - `editor_selection`, `editor_note` and `linked_note` carry `full_path`, so the file can be opened
+    directly instead of searched for.
+- **Sent turns show what they quoted.** User bubbles displayed only the typed text, with no trace of
+  the selection, current note or attached documents. Those now render as chips above the bubble;
+  clicking one reveals the original excerpt and its path in place.
+
 ## 1.7.10 — 2026-11-15
 
 - **Reasoning strength is now its own control.** Effort levels used to live in a hover submenu
