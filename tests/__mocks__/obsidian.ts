@@ -20,6 +20,14 @@ export class Plugin {
   addSettingTab = jest.fn();
   registerView = jest.fn();
   registerEvent = jest.fn();
+  registerHoverLinkSource = jest.fn();
+  registerDomEvent = jest.fn();
+  registerInterval = jest.fn((id?: number) => id ?? 0);
+  registerMarkdownPostProcessor = jest.fn();
+  registerEditorExtension = jest.fn();
+  registerEditorSuggest = jest.fn();
+  registerObsidianProtocolHandler = jest.fn();
+  addStatusBarItem = jest.fn(() => document.createElement('div'));
   loadData = jest.fn().mockResolvedValue({});
   saveData = jest.fn().mockResolvedValue(undefined);
 }

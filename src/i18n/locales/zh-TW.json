@@ -604,6 +604,13 @@
       "btnChange": "變更",
       "btnSet": "設定快捷鍵"
     },
+    "toggleViewPlacementHotkey": {
+      "name": "切換 Codian 位置",
+      "descWithKey": "左側/右側邊欄 ↔ 主編輯器分頁",
+      "descNoKey": "未設定快捷鍵",
+      "btnChange": "更改",
+      "btnSet": "設定快捷鍵"
+    },
     "slashCommands": {
       "name": "命令與技能",
       "desc": "管理儲存在 .claude/commands/ 和 .claude/skills/ 中的 Vault 級命令與技能。由 /名稱 觸發。"

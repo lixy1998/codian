@@ -604,6 +604,13 @@
       "btnChange": "Modifier",
       "btnSet": "Définir"
     },
+    "toggleViewPlacementHotkey": {
+      "name": "Basculer l'emplacement de Codian",
+      "descWithKey": "Barre latérale gauche/droite <-> onglet de l'éditeur principal",
+      "descNoKey": "No hotkey set",
+      "btnChange": "Modifier",
+      "btnSet": "Définir le raccourci"
+    },
     "slashCommands": {
       "name": "Commandes et compétences",
       "desc": "Gérez les commandes et compétences au niveau du vault stockées dans .claude/commands/ et .claude/skills/. Déclenchées par /nom."

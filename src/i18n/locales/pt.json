@@ -604,6 +604,13 @@
       "btnChange": "Alterar",
       "btnSet": "Definir"
     },
+    "toggleViewPlacementHotkey": {
+      "name": "Alternar local do Codian",
+      "descWithKey": "Barra lateral esquerda/direita <-> aba do editor principal",
+      "descNoKey": "No hotkey set",
+      "btnChange": "Alterar",
+      "btnSet": "Definir atalho"
+    },
     "slashCommands": {
       "name": "Comandos e habilidades",
       "desc": "Gerencie comandos e habilidades a nível de vault armazenados em .claude/commands/ e .claude/skills/. Acionados por /nome."

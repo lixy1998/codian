@@ -28,6 +28,8 @@ jest.mock('fs');
 import CodianPlugin from '@/main';
 import { CODIAN_RIBBON_ICON_ID, CODIAN_RIBBON_ICON_SVG } from '@/shared/codianLogo';
 
+import { loadPlugin } from '../helpers/pluginLifecycle';
+
 describe('CodianPlugin', () => {
   let plugin: CodianPlugin;
   let mockApp: any;
@@ -43,6 +45,11 @@ describe('CodianPlugin', () => {
     }
 
     return call[0];
+  }
+
+  /** Lets a fire-and-forget `activateView()` settle before asserting. */
+  async function flushActivateView(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
   function installVaultFiles(initialFiles: Record<string, string>): Map<string, string> {
@@ -113,6 +120,9 @@ describe('CodianPlugin', () => {
         }),
         setActiveLeaf: jest.fn(),
         revealLeaf: jest.fn(),
+        rootSplit: { id: 'root-split' },
+        leftSplit: { id: 'left-split' },
+        rightSplit: { id: 'right-split' },
       },
     };
 
@@ -129,7 +139,7 @@ describe('CodianPlugin', () => {
 
   describe('onload', () => {
     it('should initialize settings with defaults', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       expect(plugin.settings).toBeDefined();
       expect(plugin.settings.permissionMode).toBe(DEFAULT_SETTINGS.permissionMode);
@@ -139,7 +149,7 @@ describe('CodianPlugin', () => {
     // Note: With multi-tab, agentService is per-tab via TabManager, not on plugin
 
     it('should register the view', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       expect((plugin.registerView as jest.Mock)).toHaveBeenCalledWith(
         VIEW_TYPE_CODIAN,
@@ -148,7 +158,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should add ribbon icon', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       expect(addIcon).toHaveBeenCalledWith(CODIAN_RIBBON_ICON_ID, CODIAN_RIBBON_ICON_SVG);
       expect((plugin.addRibbonIcon as jest.Mock)).toHaveBeenCalledWith(
@@ -159,7 +169,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should add command to open view', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       expect((plugin.addCommand as jest.Mock)).toHaveBeenCalledWith({
         id: 'open-view',
@@ -202,7 +212,10 @@ describe('CodianPlugin', () => {
         new Promise<boolean>(resolve => setTimeout(() => resolve(false), 20)),
       ]);
       finishHistoryScan({ metadata: [], complete: true, invalidMetadataCount: 0 });
+      // onload is synchronous by design; the settings (and the repository that
+      // holds restored metadata) are populated once the deferred load settles.
       await onloadPromise;
+      await plugin.waitForSettingsReady();
       const cachedConversation = plugin.getCachedConversation(restoredMetadata.id);
       const didLoadRestoredMetadata = loadSpy.mock.calls.some(
         ([id]) => id === restoredMetadata.id,
@@ -234,7 +247,7 @@ describe('CodianPlugin', () => {
           invalidMetadataCount: 0,
         });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       const beforeLayoutReady = plugin.getCachedConversation(backgroundMetadata.id);
       layoutReady();
       for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -305,7 +318,7 @@ describe('CodianPlugin', () => {
           };
         });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       await (plugin as any).loadRemainingSessionMetadata();
 
       const restored = plugin.getCachedConversation(restoredMetadata.id);
@@ -371,7 +384,7 @@ describe('CodianPlugin', () => {
       claudeReconciler.environmentSessionPolicy = 'reload';
 
       try {
-        await plugin.onload();
+        await loadPlugin(plugin);
         await (plugin as any).loadRemainingSessionMetadata();
       } finally {
         delete claudeReconciler.environmentSessionPolicy;
@@ -419,7 +432,7 @@ describe('CodianPlugin', () => {
         releaseLaterBatch = resolve;
       });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       const listSpy = jest.spyOn(SessionStorage.prototype, 'scanMetadata')
         .mockImplementation(async (options) => {
           options?.onBatch?.([firstMetadata]);
@@ -496,7 +509,7 @@ describe('CodianPlugin', () => {
         finishEnvironmentWrite = resolve;
       });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       const scanSpy = jest.spyOn(SessionStorage.prototype, 'scanMetadata')
         .mockImplementation(async (options) => {
           options?.onBatch?.([firstMetadata]);
@@ -567,7 +580,7 @@ describe('CodianPlugin', () => {
         }),
       });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       const scanSpy = jest.spyOn(SessionStorage.prototype, 'scanMetadata')
         .mockImplementation(async (options) => {
           options?.onBatch?.([deferredMetadata]);
@@ -606,7 +619,7 @@ describe('CodianPlugin', () => {
         updatedAt: 2,
       };
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       const listSpy = jest.spyOn(SessionStorage.prototype, 'scanMetadata').mockImplementation(async (options) => {
         options?.onBatch?.([backgroundMetadata]);
         markBatchPublished();
@@ -662,7 +675,7 @@ describe('CodianPlugin', () => {
         }),
       });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       const firstRunSettings = JSON.parse(files.get(settingsPath) ?? '{}');
       const pendingGeneration = firstRunSettings.pendingProviderSessionInvalidations?.claude;
 
@@ -685,7 +698,7 @@ describe('CodianPlugin', () => {
           };
         });
 
-      await restartedPlugin.onload();
+      await loadPlugin(restartedPlugin);
       await (restartedPlugin as any).loadRemainingSessionMetadata();
 
       const restartedConversation = restartedPlugin.getCachedConversation(deferredMetadata.id);
@@ -735,7 +748,7 @@ describe('CodianPlugin', () => {
         }),
       });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       const listSpy = jest.spyOn(SessionStorage.prototype, 'scanMetadata')
         .mockImplementation(async (options) => {
           options?.onBatch?.([deferredMetadata]);
@@ -777,13 +790,13 @@ describe('CodianPlugin', () => {
 
   describe('onunload', () => {
     it('should complete without error', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       expect(() => plugin.onunload()).not.toThrow();
     });
 
     it('keeps the latest open-tab snapshot when views are not closed first', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const state = {
         openTabs: [{ tabId: 'tab-1', conversationId: 'conversation-1' }],
         activeTabId: 'tab-1',
@@ -809,7 +822,7 @@ describe('CodianPlugin', () => {
       const mockLeaf = { id: 'existing-leaf' };
       mockApp.workspace.getLeavesOfType.mockReturnValue([mockLeaf]);
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       await plugin.activateView();
 
       expect(mockApp.workspace.revealLeaf).toHaveBeenCalledWith(mockLeaf);
@@ -822,7 +835,7 @@ describe('CodianPlugin', () => {
       mockApp.workspace.getLeavesOfType.mockReturnValue([]);
       mockApp.workspace.getRightLeaf.mockReturnValue(mockRightLeaf);
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       await plugin.activateView();
 
       expect(mockApp.workspace.getRightLeaf).toHaveBeenCalledWith(false);
@@ -839,7 +852,7 @@ describe('CodianPlugin', () => {
       mockApp.workspace.getLeavesOfType.mockReturnValue([]);
       mockApp.workspace.getLeftLeaf.mockReturnValue(mockLeftLeaf);
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       plugin.settings.chatViewPlacement = 'left-sidebar';
       await plugin.activateView();
 
@@ -856,7 +869,7 @@ describe('CodianPlugin', () => {
       mockApp.workspace.getLeavesOfType.mockReturnValue([]);
       mockApp.workspace.getRightLeaf.mockReturnValue(null);
 
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       // Should not throw
       await expect(plugin.activateView()).resolves.not.toThrow();
@@ -869,7 +882,7 @@ describe('CodianPlugin', () => {
       mockApp.workspace.getLeavesOfType.mockReturnValue([]);
       mockApp.workspace.getLeaf.mockReturnValue(mockMainLeaf);
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       plugin.settings.chatViewPlacement = 'main-tab';
       await plugin.activateView();
 
@@ -886,10 +899,128 @@ describe('CodianPlugin', () => {
       mockApp.workspace.getLeavesOfType.mockReturnValue([]);
       mockApp.workspace.getLeaf.mockReturnValue(null);
 
-      await plugin.onload();
+      await loadPlugin(plugin);
       plugin.settings.chatViewPlacement = 'main-tab';
 
       await expect(plugin.activateView()).resolves.not.toThrow();
+    });
+  });
+
+  describe('toggle-view-placement', () => {
+    function installPlacementLeaf(root: unknown) {
+      const view = { getTabManager: jest.fn(), getViewType: () => VIEW_TYPE_CODIAN };
+      const leaf = {
+        parent: { id: 'tab-group' },
+        view,
+        getRoot: () => root,
+        getViewState: () => ({ type: VIEW_TYPE_CODIAN, state: {} }),
+        detach: jest.fn().mockResolvedValue(undefined),
+      };
+      mockApp.workspace.getLeavesOfType.mockReturnValue([leaf]);
+      return { leaf, view };
+    }
+
+    it('registers the toggle and one command per placement', async () => {
+      await loadPlugin(plugin);
+
+      expect(getRegisteredCommand('toggle-view-placement').name)
+        .toBe('Toggle chat placement (sidebar / main tab)');
+      expect(getRegisteredCommand('move-view-to-left-sidebar').name)
+        .toBe('Move chat view to Left sidebar');
+      expect(getRegisteredCommand('move-view-to-right-sidebar').name)
+        .toBe('Move chat view to Right sidebar');
+      expect(getRegisteredCommand('move-view-to-main-tab').name)
+        .toBe('Move chat view to Main editor tab');
+    });
+
+    it('moves a sidebar view into the main editor tab and remembers it', async () => {
+      const { leaf } = installPlacementLeaf(mockApp.workspace.rightSplit);
+      const mainLeaf = { setViewState: jest.fn().mockResolvedValue(undefined) };
+      mockApp.workspace.getLeaf.mockReturnValue(mainLeaf);
+      await loadPlugin(plugin);
+
+      await plugin.moveViewToPlacement('main-tab');
+
+      // Sidebar and main-area leaves live in different trees: the move is done
+      // by rebuilding the view in the destination leaf, not by relocating it.
+      expect(mockApp.workspace.getLeaf).toHaveBeenCalledWith('tab');
+      expect(mainLeaf.setViewState).toHaveBeenCalledWith(
+        { type: VIEW_TYPE_CODIAN, state: {} },
+        {},
+      );
+      expect(leaf.detach).toHaveBeenCalledTimes(1);
+      expect(plugin.settings.chatViewPlacement).toBe('main-tab');
+    });
+
+    it('moves a main-area view back into a sidebar', async () => {
+      const { leaf } = installPlacementLeaf(mockApp.workspace.rootSplit);
+      const leftLeaf = { setViewState: jest.fn().mockResolvedValue(undefined) };
+      mockApp.workspace.getLeftLeaf.mockReturnValue(leftLeaf);
+      await loadPlugin(plugin);
+
+      await plugin.moveViewToPlacement('left-sidebar');
+
+      expect(mockApp.workspace.getLeftLeaf).toHaveBeenCalledWith(false);
+      expect(leftLeaf.setViewState).toHaveBeenCalledWith(
+        { type: VIEW_TYPE_CODIAN, state: {} },
+        {},
+      );
+      expect(leaf.detach).toHaveBeenCalledTimes(1);
+      expect(plugin.settings.chatViewPlacement).toBe('left-sidebar');
+    });
+
+    it('only reveals the view when it already sits at the requested placement', async () => {
+      const { leaf } = installPlacementLeaf(mockApp.workspace.leftSplit);
+      await loadPlugin(plugin);
+
+      await plugin.moveViewToPlacement('left-sidebar');
+
+      expect(leaf.detach).not.toHaveBeenCalled();
+      expect(mockApp.workspace.revealLeaf).toHaveBeenCalledWith(leaf);
+    });
+
+    it('toggles sidebar to main tab and back to the same sidebar', async () => {
+      installPlacementLeaf(mockApp.workspace.leftSplit);
+      const mainLeaf = { setViewState: jest.fn().mockResolvedValue(undefined) };
+      const leftLeaf = { setViewState: jest.fn().mockResolvedValue(undefined) };
+      mockApp.workspace.getLeaf.mockReturnValue(mainLeaf);
+      mockApp.workspace.getLeftLeaf.mockReturnValue(leftLeaf);
+      await loadPlugin(plugin);
+
+      const toggle = getRegisteredCommand('toggle-view-placement');
+      await toggle.callback();
+      await flushActivateView();
+      expect(mainLeaf.setViewState).toHaveBeenCalledTimes(1);
+      expect(plugin.settings.chatViewPlacement).toBe('main-tab');
+
+      // The rebuilt view now lives in the main area.
+      mockApp.workspace.getLeavesOfType.mockReturnValue([{
+        parent: { id: 'tab-group' },
+        root: mockApp.workspace.rootSplit,
+        getRoot: () => mockApp.workspace.rootSplit,
+        view: { getTabManager: jest.fn(), getViewType: () => VIEW_TYPE_CODIAN },
+        getViewState: () => ({ type: VIEW_TYPE_CODIAN, state: {} }),
+        detach: jest.fn().mockResolvedValue(undefined),
+      }]);
+      await toggle.callback();
+      await flushActivateView();
+      expect(leftLeaf.setViewState).toHaveBeenCalledTimes(1);
+      expect(plugin.settings.chatViewPlacement).toBe('left-sidebar');
+    });
+
+    it('opens the view at the requested placement when none exists yet', async () => {
+      mockApp.workspace.getLeavesOfType.mockReturnValue([]);
+      const leftLeaf = { setViewState: jest.fn().mockResolvedValue(undefined) };
+      mockApp.workspace.getLeftLeaf.mockReturnValue(leftLeaf);
+      await loadPlugin(plugin);
+
+      await plugin.moveViewToPlacement('left-sidebar');
+
+      expect(plugin.settings.chatViewPlacement).toBe('left-sidebar');
+      expect(leftLeaf.setViewState).toHaveBeenCalledWith({
+        type: VIEW_TYPE_CODIAN,
+        active: true,
+      });
     });
   });
 
@@ -1013,7 +1144,7 @@ describe('CodianPlugin', () => {
 
   describe('saveSettings', () => {
     it('should save settings to file', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       await plugin.saveSettings();
 
@@ -1042,7 +1173,7 @@ describe('CodianPlugin', () => {
 
   describe('applyEnvironmentVariables', () => {
     it('holds the provider auxiliary transition across the environment settings commit', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const release = jest.fn().mockResolvedValue(undefined);
       const begin = jest.fn().mockResolvedValue({ release });
       ProviderWorkspaceRegistry.setServices('grok', {
@@ -1057,7 +1188,7 @@ describe('CodianPlugin', () => {
     });
 
     it('lets only an initialized transition owner resolve CLI while normal callers stay gated', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const cliResolver = {
         reset: jest.fn(),
         resolveFromSettings: jest.fn().mockReturnValue('/owned/codex'),
@@ -1081,7 +1212,7 @@ describe('CodianPlugin', () => {
     });
 
     it('does not initialize a cold provider for transition-owner CLI resolution', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       ProviderWorkspaceRegistry.setServices('grok', undefined);
       const initialize = jest.fn(async () => ({
         cliResolver: {
@@ -1102,7 +1233,7 @@ describe('CodianPlugin', () => {
     });
 
     it('refreshes an initialized Grok catalog through its owned CLI path while gated', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       updateGrokProviderSettings(plugin.settings, {
         cliPath: process.execPath,
         enabled: true,
@@ -1141,7 +1272,7 @@ describe('CodianPlugin', () => {
     });
 
     it('computes an initialized Codex catalog fingerprint through owned CLI while gated', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const discoveredModel = {
         defaultReasoningEffort: 'medium',
         defaultServiceTier: null,
@@ -1189,7 +1320,7 @@ describe('CodianPlugin', () => {
     });
 
     it('recovers the committed environment before surfacing a post-commit publication failure', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       updateGrokProviderSettings(plugin.settings, {
         enabled: true,
         environmentVariables: 'GROK_PROFILE=old',
@@ -1273,7 +1404,7 @@ describe('CodianPlugin', () => {
     });
 
     it('retains a committed invalidation generation when publication fails before invalidation', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       (plugin as any).hasLoadedAllSessionMetadata = true;
       const conversation = await plugin.createConversation({
         providerId: 'claude',
@@ -1356,7 +1487,7 @@ describe('CodianPlugin', () => {
     });
 
     it('keeps invalidation pending until every invalidated metadata write succeeds', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       (plugin as any).hasLoadedAllSessionMetadata = true;
       const first = await plugin.createConversation({
         providerId: 'claude',
@@ -1413,7 +1544,7 @@ describe('CodianPlugin', () => {
     });
 
     it('restores the committed Grok context before releasing a failed settings transition', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       updateGrokProviderSettings(plugin.settings, {
         enabled: true,
         environmentVariables: 'GROK_PROFILE=old',
@@ -1485,7 +1616,7 @@ describe('CodianPlugin', () => {
     });
 
     it('does not leak failed Claude invalidation into live or deferred conversations', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const live = await plugin.createConversation({
         providerId: 'claude',
         sessionId: 'live-session',
@@ -1639,7 +1770,7 @@ describe('CodianPlugin', () => {
     });
 
     it('holds a provider transition through a CLI settings commit and runtime recycle', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const events: string[] = [];
       const recycleProviderRuntimes = jest.fn(async () => { events.push('recycle'); });
       const tabManager = {
@@ -1688,7 +1819,7 @@ describe('CodianPlugin', () => {
     });
 
     it('releases the provider transition without recycling when a CLI settings write fails', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const release = jest.fn().mockResolvedValue(undefined);
       ProviderWorkspaceRegistry.setServices('grok', {
         beginAuxiliaryServicesEnvironmentChange: jest.fn().mockResolvedValue({ release }),
@@ -1712,7 +1843,7 @@ describe('CodianPlugin', () => {
     });
 
     it('updates runtime env vars when changed', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       await plugin.applyEnvironmentVariables('shared', 'A=2');
       expect(plugin.getEnvironmentVariablesForScope('shared')).toBe('A=2');
@@ -1727,7 +1858,7 @@ describe('CodianPlugin', () => {
     });
 
     it('invalidates sessions when env hash changes', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation({ sessionId: 'session-123' });
       const saveMetadataSpy = jest.spyOn(plugin.storage.sessions, 'saveMetadata');
@@ -1741,7 +1872,7 @@ describe('CodianPlugin', () => {
     });
 
     it('serializes overlapping environment invalidation writes', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       (plugin as any).hasLoadedAllSessionMetadata = true;
       await plugin.createConversation({ sessionId: 'overlapping-session' });
       let finishFirstWrite!: () => void;
@@ -1790,7 +1921,7 @@ describe('CodianPlugin', () => {
     });
 
     it('flushes already-invalidated sessions after an earlier environment write fails', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       (plugin as any).hasLoadedAllSessionMetadata = true;
       await plugin.createConversation({ sessionId: 'failed-overlap-session' });
       const saveMetadataSpy = jest.spyOn(plugin.storage.sessions, 'saveMetadata')
@@ -1817,7 +1948,7 @@ describe('CodianPlugin', () => {
     });
 
     it('broadcasts ensureReady with force when env changes without model change', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       // Mock one open view with an initialized Claude runtime.
       const mockSyncConversationState = jest.fn();
@@ -1854,7 +1985,7 @@ describe('CodianPlugin', () => {
     });
 
     it('restarts affected runtimes in every open Codian view', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const createView = () => {
         const ensureReady = jest.fn().mockResolvedValue(true);
@@ -1902,7 +2033,7 @@ describe('CodianPlugin', () => {
     });
 
     it('syncs live external contexts before restarting invalidated Claude runtimes', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conversation = await plugin.createConversation({
         providerId: 'claude',
@@ -1954,7 +2085,7 @@ describe('CodianPlugin', () => {
     });
 
     it('reloads preserved sessions while resetting only invalidation-policy providers', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const reloadConversation = await plugin.createConversation({
         providerId: 'claude',
@@ -2072,7 +2203,7 @@ describe('CodianPlugin', () => {
     });
 
     it('does not create a provider session while reloading an initialized blank Grok tab', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const syncConversationState = jest.fn();
       const resetSession = jest.fn();
@@ -2112,7 +2243,7 @@ describe('CodianPlugin', () => {
     });
 
     it('waits for a first Grok turn to persist its live binding before reload synchronization', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conversation = await plugin.createConversation({ providerId: 'grok' });
       const events: string[] = [];
       const syncConversationState = jest.fn((syncedConversation) => {
@@ -2178,12 +2309,13 @@ describe('CodianPlugin', () => {
 
   describe('ribbon icon callback', () => {
     it('reveals existing view when ribbon icon is clicked', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const mockLeaf = { id: 'existing' };
       mockApp.workspace.getLeavesOfType.mockReturnValue([mockLeaf]);
 
       const ribbonCallback = (plugin.addRibbonIcon as jest.Mock).mock.calls[0][2];
-      await ribbonCallback();
+      ribbonCallback();
+      await flushActivateView();
 
       expect(mockApp.workspace.revealLeaf).toHaveBeenCalledWith(mockLeaf);
     });
@@ -2191,12 +2323,17 @@ describe('CodianPlugin', () => {
 
   describe('command callback', () => {
     it('reveals existing view when command is executed', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const mockLeaf = { id: 'existing' };
       mockApp.workspace.getLeavesOfType.mockReturnValue([mockLeaf]);
 
-      const commandConfig = (plugin.addCommand as jest.Mock).mock.calls[0][0];
-      await commandConfig.callback();
+      // Commands stay synchronous for Obsidian's checker; the activation they
+      // kick off is fire-and-forget, so wait for it explicitly.
+      const commandConfig = (plugin.addCommand as jest.Mock).mock.calls
+        .map(([config]) => config)
+        .find((config) => config.id === 'open-view');
+      commandConfig.callback();
+      await flushActivateView();
 
       expect(mockApp.workspace.revealLeaf).toHaveBeenCalledWith(mockLeaf);
     });
@@ -2204,7 +2341,7 @@ describe('CodianPlugin', () => {
 
   describe('new-tab command', () => {
     it('opens the view without creating a duplicate tab when no tab layout is persisted', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const createNewTab = jest.fn().mockResolvedValue(undefined);
       const mockView = {
@@ -2240,7 +2377,7 @@ describe('CodianPlugin', () => {
         },
       });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const createNewTab = jest.fn().mockResolvedValue(undefined);
       const mockView = {
@@ -2267,7 +2404,7 @@ describe('CodianPlugin', () => {
     });
 
     it('stays unavailable when the open view is already at the tab limit', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const mockView = {
         getTabManager: jest.fn().mockReturnValue({
@@ -2283,7 +2420,7 @@ describe('CodianPlugin', () => {
     });
 
     it('keeps tab commands unavailable while a Codian leaf view is not initialized', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       mockApp.workspace.getLeavesOfType.mockReturnValue([{ view: {} }]);
 
@@ -2307,7 +2444,7 @@ describe('CodianPlugin', () => {
         },
       });
 
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       jest.spyOn(plugin, 'getView').mockReturnValue(null);
 
@@ -2319,7 +2456,7 @@ describe('CodianPlugin', () => {
 
   describe('createConversation', () => {
     it('should create a new conversation with unique ID', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
 
@@ -2329,7 +2466,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should allow retrieving created conversation by ID', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       const fetched = await plugin.getConversationById(conv.id);
@@ -2338,7 +2475,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should store the selected model in conversation metadata', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation({ selectedModel: 'opus' });
       const fetched = await plugin.getConversationById(conv.id);
@@ -2348,7 +2485,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should preserve custom selected models that are not in picker options', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation({
         providerId: 'codex',
@@ -2361,7 +2498,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should lazily migrate missing selected model from usage metadata', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       delete (conv as { selectedModel?: string }).selectedModel;
@@ -2384,7 +2521,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should not permanently default legacy conversations with unknown model metadata', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       delete (conv as { selectedModel?: string }).selectedModel;
@@ -2398,7 +2535,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should generate default title with timestamp', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
 
@@ -2412,7 +2549,7 @@ describe('CodianPlugin', () => {
 
   describe('switchConversation', () => {
     it('should switch to existing conversation', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv1 = await plugin.createConversation();
       await plugin.createConversation(); // Create second conversation to switch from
@@ -2425,7 +2562,7 @@ describe('CodianPlugin', () => {
     // Note: Session ID restoration is now handled per-tab via TabManager
 
     it('should return null for non-existent conversation', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const result = await plugin.switchConversation('non-existent-id');
 
@@ -2433,7 +2570,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should preserve a conversation when local Claude history is missing', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conversation = await plugin.createConversation({
         sessionId: 'session-removed-after-startup',
       });
@@ -2451,7 +2588,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should preserve a conversation whose Claude session belongs to a previous vault path', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conversation = await plugin.createConversation({
         sessionId: 'session-from-previous-vault-path',
       });
@@ -2479,7 +2616,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should restore resume metadata when relocated-state persistence fails', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conversation = await plugin.createConversation({
         sessionId: 'session-relocation-save-failure',
       });
@@ -2506,7 +2643,7 @@ describe('CodianPlugin', () => {
 
   describe('deleteConversation', () => {
     it('should delete conversation by ID', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       const convId = conv.id;
@@ -2521,7 +2658,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should allow deleting last conversation without recreating', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.deleteConversation(conv.id);
@@ -2531,7 +2668,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should preserve the provider-native session when requested', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conv = await plugin.createConversation({ sessionId: 'provider-session-1' });
       const deleteNativeSpy = jest.spyOn(sdkSession, 'deleteSDKSession');
 
@@ -2543,7 +2680,7 @@ describe('CodianPlugin', () => {
     });
 
     it('retires the deleted conversation and delegates open-tab reset', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conv = await plugin.createConversation();
       const resetDeletedConversation = jest.fn();
       const retireConversation = jest.spyOn(plugin.sessionRuntimePool, 'retireConversation');
@@ -2565,7 +2702,7 @@ describe('CodianPlugin', () => {
 
   describe('handleMissingProviderSession', () => {
     it('preserves the record when the provider cannot verify a safe disposition', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conv = await plugin.createConversation({
         providerId: 'codex',
         sessionId: 'unverified-provider-session',
@@ -2579,7 +2716,7 @@ describe('CodianPlugin', () => {
     });
 
     it('removes the record when every provider transcript segment is missing', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conv = await plugin.createConversation({ sessionId: 'missing-current' });
       jest.mocked(sdkSession.locateSDKSessions).mockResolvedValue(new Map([
         ['missing-current', { availability: 'missing' }],
@@ -2593,7 +2730,7 @@ describe('CodianPlugin', () => {
     });
 
     it('preserves the record and clears resume state when older history is inaccessible', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conv = await plugin.createConversation({ sessionId: 'missing-current' });
       await plugin.updateConversation(conv.id, {
         providerState: {
@@ -2619,7 +2756,7 @@ describe('CodianPlugin', () => {
     });
 
     it('preserves metadata when the missing-session disposition cannot be read', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
       const conv = await plugin.createConversation({ sessionId: 'missing-current' });
       jest.mocked(sdkSession.locateSDKSessions).mockRejectedValueOnce(new Error('EACCES'));
 
@@ -2633,7 +2770,7 @@ describe('CodianPlugin', () => {
 
   describe('renameConversation', () => {
     it('should rename conversation', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
 
@@ -2644,7 +2781,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should use default title if empty string provided', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
 
@@ -2657,7 +2794,7 @@ describe('CodianPlugin', () => {
 
   describe('updateConversation', () => {
     it('should update conversation messages', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       const messages = [
@@ -2671,7 +2808,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should preserve image data when updating conversation messages', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       const messages = [
@@ -2700,7 +2837,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should update conversation sessionId', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
 
@@ -2711,7 +2848,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should update updatedAt timestamp', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       const originalUpdatedAt = conv.updatedAt;
@@ -2728,7 +2865,7 @@ describe('CodianPlugin', () => {
 
   describe('getConversationList', () => {
     it('should return conversation metadata', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       await plugin.createConversation();
 
@@ -2742,7 +2879,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should generate conversation preview metadata', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -2966,7 +3103,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should preserve previousProviderSessionIds through conversation updates', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -2990,7 +3127,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should handle empty previousProviderSessionIds array', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3007,7 +3144,7 @@ describe('CodianPlugin', () => {
 
   describe('loadSdkMessagesForConversation - fork branch', () => {
     it('should repair blank image data from Claude SDK history during hydration', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3074,7 +3211,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should load from forkSource.sessionId and truncate at forkSource.resumeAt for pending fork', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3122,7 +3259,7 @@ describe('CodianPlugin', () => {
     });
 
     it('should NOT use fork path when conversation has its own providerSessionId', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3154,7 +3291,7 @@ describe('CodianPlugin', () => {
 
   describe('loadSdkMessagesForConversation - subagent recovery', () => {
     it('restores subagent data when Task tool exists but subagent content block is missing', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3234,7 +3371,7 @@ describe('CodianPlugin', () => {
     });
 
     it('prefers richer SDK task result over stale cached subagent result', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3297,7 +3434,7 @@ describe('CodianPlugin', () => {
     });
 
     it('keeps the richer cached async result when both SDK and cache are terminal', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3366,7 +3503,7 @@ describe('CodianPlugin', () => {
     });
 
     it('drops stale asyncStatus from cached sync subagents during recovery', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3422,7 +3559,7 @@ describe('CodianPlugin', () => {
     });
 
     it('prefers terminal SDK async status over stale cached running state', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3492,7 +3629,7 @@ describe('CodianPlugin', () => {
     });
 
     it('prefers cached terminal async status over SDK launch-only running state', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3563,7 +3700,7 @@ describe('CodianPlugin', () => {
     });
 
     it('restores async subagent data and mode when Task tool exists but async block is missing', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3632,7 +3769,7 @@ describe('CodianPlugin', () => {
     });
 
     it('hydrates async subagent tool calls from SDK subagent files on reload', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {
@@ -3714,7 +3851,7 @@ describe('CodianPlugin', () => {
     });
 
     it('keeps async subagent renderer visible when task block and task tool call are both missing', async () => {
-      await plugin.onload();
+      await loadPlugin(plugin);
 
       const conv = await plugin.createConversation();
       await plugin.updateConversation(conv.id, {

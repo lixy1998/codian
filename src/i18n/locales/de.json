@@ -604,6 +604,13 @@
       "btnChange": "Ändern",
       "btnSet": "Festlegen"
     },
+    "toggleViewPlacementHotkey": {
+      "name": "Codian-Position umschalten",
+      "descWithKey": "Linke/rechte Seitenleiste <-> Haupteditor-Tab",
+      "descNoKey": "No hotkey set",
+      "btnChange": "Ändern",
+      "btnSet": "Tastenkürzel festlegen"
+    },
     "slashCommands": {
       "name": "Befehle und Fähigkeiten",
       "desc": "Verwalte Vault-Befehle und -Fähigkeiten in .claude/commands/ und .claude/skills/. Ausgelöst durch /Name."

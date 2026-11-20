@@ -4,6 +4,25 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.9.0 — 2026-11-20
+
+- **Chat placement can be changed without a trip to settings.** The panel used to be pinned where
+  the "Open Codian in" dropdown put it; switching between a sidebar and a main-editor tab meant
+  closing it and editing the setting.
+  - New command **Toggle chat placement (sidebar / main tab)** — bind a hotkey once and flip between
+    the current sidebar and the main editor area.
+  - New commands **Move chat view to Left sidebar / Right sidebar / Main editor tab** for one-way
+    jumps, each bindable on its own.
+  - The open conversations survive the move. Obsidian rebuilds the view in the
+    destination area, so the tab state is persisted first and the unsent drafts
+    are carried over — a restoring tab can replace the view instance mid-move,
+    so the restore follows whichever view ends up hosting the chat.
+  - The dropdown now reflects the new location.
+- **The `main.ts` integration suite runs again on a fresh checkout.** It had been
+  failing wholesale because the obsidian mock predated `registerHoverLinkSource`
+  and because `onload` stopped awaiting the settings load; tests now go through a
+  `loadPlugin()` helper that also waits for the deferred load.
+
 ## 1.8.0 — 2026-11-16
 
 - **The composer accepts documents, not just images.** Dropping a file used to be a no-op unless it

@@ -52,7 +52,7 @@ import { compareConversationIndexOrder } from './core/types';
 import {
   VIEW_TYPE_CODIAN,
 } from './core/types';
-import type { ChatViewPlacement, EnvironmentScope } from './core/types/settings';
+import { CHAT_VIEW_PLACEMENTS, type ChatViewPlacement, type EnvironmentScope } from './core/types/settings';
 import { CodianView } from './features/chat/CodianView';
 import { LivePreviewComposerEnhancement } from './features/chat/composer/LivePreviewComposerEnhancement';
 import type { ComposerEnhancement } from './features/chat/composer/types';
@@ -74,10 +74,155 @@ import { resolveLoginShellPath } from './utils/loginShellPath';
 import { revealWorkspaceLeaf } from './utils/obsidianCompat';
 import { getVaultPath } from './utils/path';
 
+/** Destination names used by the per-placement "move chat view" commands. */
+const CHAT_VIEW_PLACEMENT_LABEL_KEYS: Record<ChatViewPlacement, string> = {
+  'right-sidebar': 'Right sidebar',
+  'left-sidebar': 'Left sidebar',
+  'main-tab': 'Main editor tab',
+};
+
+/**
+ * Wraps one view instance's `load` so the callback runs right after the view
+ * has rebuilt itself. WorkspaceLeaf loads the very instance it was given, which
+ * lets the draft restore land before the new composer is ever painted.
+ */
+function hookInstanceLoad(
+  view: CodianView & { load?: () => Promise<void> },
+  afterLoad: (view: CodianView) => void,
+): void {
+  const originalLoad = view.load;
+  if (typeof originalLoad !== 'function') return;
+
+  const patched = function patchedLoad(this: CodianView) {
+    const result = originalLoad.call(view);
+    const restore = () => afterLoad(this);
+    const settled = Promise.resolve(result).then(() => {
+      restore();
+      window.requestAnimationFrame(restore);
+    });
+    // Never re-install the wrapper: the view is loaded once per placement.
+    view.load = originalLoad;
+    return settled;
+  };
+
+  view.load = patched;
+}
+
+/** Unsent composer text of one tab, keyed by tab id. */
+const RESTORE_DRAFT_INTERVAL_MS = 100;
+const RESTORE_DRAFT_MAX_ATTEMPTS = 50;
+/** Re-check delay: a restoring tab can overwrite the composer after the first write. */
+const RESTORE_DRAFT_RECHECK_MS = 1500;
+
+function collectComposerDrafts(view: CodianView): Map<string, string> {
+  const drafts = new Map<string, string>();
+  for (const tab of view.getTabManager()?.getAllTabs() ?? []) {
+    const value = tab.dom.inputEl?.value;
+    if (value) drafts.set(tab.id, value);
+  }
+  return drafts;
+}
+
+/**
+ * A freshly restored tab may still be mounting (the conversation list is
+ * loaded asynchronously), so the composer is polled until the text lands.
+ */
+function restoreComposerDraftsWhenReady(
+  view: CodianView,
+  drafts: Map<string, string>,
+  onDone: () => void,
+): void {
+  if (drafts.size === 0) {
+    onDone();
+    return;
+  }
+
+  let finished = false;
+  let attempts = 0;
+  let observer: MutationObserver | null = null;
+  let timer: number | null = null;
+
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    observer?.disconnect();
+    if (timer !== null) window.clearTimeout(timer);
+    onDone();
+  };
+
+  const apply = (): boolean => {
+    const target = currentView() ?? view;
+    const missing = new Set(drafts.keys());
+    for (const tab of target.getTabManager()?.getAllTabs() ?? []) {
+      const draft = drafts.get(tab.id);
+      const inputEl = tab.dom.inputEl;
+      if (!draft || !inputEl) continue;
+      if (inputEl.value !== draft) setComposerDraft(inputEl, draft);
+      if (inputEl.value === draft) missing.delete(tab.id);
+    }
+    if (missing.size === 0) {
+      finish();
+      return true;
+    }
+    return false;
+  };
+
+  // Entering the main area replaces the view instance, so the restore follows
+  // whichever view currently hosts the chat and whichever leaf holds it.
+  const currentView = (): CodianView | null => {
+    for (const candidate of findCodianLeaves(view)) {
+      if (isCodianView(candidate.view)) return candidate.view;
+    }
+    return null;
+  };
+
+  // The rebuilt view mounts its tabs asynchronously; watch every container the
+  // chat can land in so the draft is written the moment the composer appears.
+  observer = new MutationObserver(() => {
+    if (apply()) finish();
+  });
+  for (const element of [view.containerEl, ...findCodianLeaves(view).map(l => (l.view as CodianView).containerEl)]) {
+    if (element?.isConnected) observer.observe(element, { childList: true, subtree: true });
+  }
+
+  const tick = () => {
+    if (apply()) return;
+    if (++attempts > RESTORE_DRAFT_MAX_ATTEMPTS) {
+      const target = currentView() ?? view;
+      console.warn('[Codian] could not restore the unsent draft', {
+        drafts: [...drafts.entries()],
+        tabs: (target.getTabManager()?.getAllTabs() ?? []).map(t => ({
+          id: t.id,
+          hasInput: !!t.dom?.inputEl,
+        })),
+      });
+      finish();
+      return;
+    }
+    timer = window.setTimeout(tick, RESTORE_DRAFT_INTERVAL_MS);
+  };
+
+  window.requestAnimationFrame(tick);
+}
+
+function setComposerDraft(inputEl: HTMLTextAreaElement, draft: string): void {
+  inputEl.value = draft;
+  inputEl.selectionStart = draft.length;
+  inputEl.selectionEnd = draft.length;
+  const EventConstructor = inputEl.ownerDocument.defaultView?.Event ?? Event;
+  inputEl.dispatchEvent(new EventConstructor('input', { bubbles: true }));
+}
+
 function isCodianView(value: unknown): value is CodianView {
   return !!value
     && typeof value === 'object'
     && typeof (value as { getTabManager?: unknown }).getTabManager === 'function';
+}
+
+/** Every leaf currently hosting a Codian view, in workspace order. */
+function findCodianLeaves(within: CodianView): WorkspaceLeaf[] {
+  const leaves = within.app.workspace.getLeavesOfType(VIEW_TYPE_CODIAN);
+  return leaves.length > 0 ? leaves : [];
 }
 
 function readPendingProviderSessionInvalidations(
@@ -160,6 +305,20 @@ export default class CodianPlugin extends Plugin {
     }
   }
 
+  /**
+   * Lets tests (and anything else that needs a settled plugin) await the
+   * deferred settings load that `onload` deliberately does not wait for.
+   * `whenSettingsReady` throws before the load has been scheduled, so this
+   * waits for that scheduling first.
+   */
+  async waitForSettingsReady(): Promise<void> {
+    if (!this.settingsReady) {
+      await Promise.resolve();
+    }
+    if (!this.settingsReady) return;
+    await this.whenSettingsReady();
+  }
+
   async onload() {
     StartupProfiler.startOnload();
     try {
@@ -207,6 +366,24 @@ export default class CodianPlugin extends Plugin {
           void this.activateView();
         },
       });
+
+      this.addCommand({
+        id: 'toggle-view-placement',
+        name: 'Toggle chat placement (sidebar / main tab)',
+        callback: async () => {
+          await this.toggleViewPlacement();
+        },
+      });
+
+      for (const placement of CHAT_VIEW_PLACEMENTS) {
+        this.addCommand({
+          id: `move-view-to-${placement}`,
+          name: `Move chat view to ${CHAT_VIEW_PLACEMENT_LABEL_KEYS[placement]}`,
+          callback: async () => {
+            await this.moveViewToPlacement(placement, { force: true });
+          },
+        });
+      }
 
       this.addCommand({
         id: 'inline-edit',
@@ -385,6 +562,114 @@ export default class CodianPlugin extends Plugin {
       case 'right-sidebar':
         return workspace.getRightLeaf(false);
     }
+  }
+
+  /**
+   * Moves the chat view to a different workspace location and remembers the
+   * destination as the open placement.
+   *
+   * Sidebar and main-area leaves live in different workspace trees and a leaf
+   * cannot be moved between them, so Obsidian has to rebuild the view there.
+   * The open conversations are restored from the persisted tab state, and the
+   * unsent drafts are carried over by hand — they only live in the input DOM.
+   */
+  async moveViewToPlacement(placement: ChatViewPlacement, options: { force?: boolean } = {}): Promise<boolean> {
+    await this.whenSettingsReady();
+    const { workspace } = this.app;
+    const leaf = workspace.getLeavesOfType(VIEW_TYPE_CODIAN)[0];
+
+    if (!leaf) {
+      await this.mutateSettings((settings) => {
+        settings.chatViewPlacement = placement;
+      });
+      await this.activateView();
+      return true;
+    }
+
+    if (!options.force && this.getPlacementOfLeaf(leaf) === placement) {
+      await revealWorkspaceLeaf(workspace, leaf);
+      return false;
+    }
+
+    const view = leaf.view as CodianView | undefined;
+    if (!view) {
+      await revealWorkspaceLeaf(workspace, leaf);
+      return false;
+    }
+
+    const drafts = collectComposerDrafts(view);
+    const tabState = view.getPersistedTabState?.() ?? null;
+    if (tabState) {
+      await this.persistTabManagerState(tabState);
+    }
+
+    const target = this.getLeafForPlacement(placement);
+    if (!target) {
+      await revealWorkspaceLeaf(workspace, leaf);
+      return false;
+    }
+
+    // Drafts have to be restored after the rebuild: entering the main area
+    // replaces the view instance, and the restore follows whatever view owns
+    // the chat at the time it runs.
+    const restoreOnLoad = (movedView: CodianView) => {
+      restoreComposerDraftsWhenReady(movedView, drafts, () => undefined);
+    };
+    hookInstanceLoad(view as CodianView & { load?: () => Promise<void> }, restoreOnLoad);
+
+    const viewState = { ...leaf.getViewState(), type: view.getViewType() };
+    const navigationState = {} as Record<string, unknown>;
+    await target.setViewState(viewState, navigationState);
+
+    const movedLeaf = workspace.getLeavesOfType(VIEW_TYPE_CODIAN)
+      .find(candidate => candidate.getRoot?.() !== leaf.getRoot?.()) ?? target;
+    if (movedLeaf !== leaf && leaf.parent) {
+      await leaf.detach();
+    }
+
+    await revealWorkspaceLeaf(workspace, movedLeaf);
+
+    // A tab that is still restoring its last message can overwrite the
+    // composer after the first successful write, so the draft is re-checked
+    // once more after the turn has settled. The view is looked up from the
+    // workspace each time: entering the main area can swap the instance.
+    restoreComposerDraftsWhenReady(this.getView() ?? view, drafts, () => {
+      window.setTimeout(() => {
+        const current = this.getView();
+        if (current) restoreComposerDraftsWhenReady(current, drafts, () => undefined);
+      }, RESTORE_DRAFT_RECHECK_MS);
+    });
+    await this.mutateSettings((settings) => {
+      settings.chatViewPlacement = placement;
+    });
+    return true;
+  }
+
+  /**
+   * Reflected placement of the leaf currently hosting the chat view.
+   *
+   * `leaf.parent` is the tab group inside a split, never the split itself, so
+   * the placement has to be read from the split a leaf is rooted in.
+   */
+  getCurrentViewPlacement(): ChatViewPlacement | null {
+    const leaf = this.app.workspace.getLeavesOfType(VIEW_TYPE_CODIAN)[0];
+    return leaf ? this.getPlacementOfLeaf(leaf) : null;
+  }
+
+  private getPlacementOfLeaf(leaf: WorkspaceLeaf): ChatViewPlacement | null {
+    const { workspace } = this.app;
+    const root = typeof leaf.getRoot === 'function' ? leaf.getRoot() : leaf.parent?.parent ?? leaf.parent;
+    if (!root) return null;
+    if (root === workspace.leftSplit) return 'left-sidebar';
+    if (root === workspace.rightSplit) return 'right-sidebar';
+    return 'main-tab';
+  }
+
+  private async toggleViewPlacement(): Promise<void> {
+    const current = this.getCurrentViewPlacement() ?? this.settings.chatViewPlacement;
+    const sidebarPlacement: ChatViewPlacement = current === 'left-sidebar' ? 'right-sidebar' : 'left-sidebar';
+    const next: ChatViewPlacement = current === 'main-tab' ? sidebarPlacement : 'main-tab';
+    await this.moveViewToPlacement(next, { force: true });
   }
 
   private canCreateNewTab(): boolean {

@@ -604,6 +604,13 @@
       "btnChange": "Изменить",
       "btnSet": "Назначить"
     },
+    "toggleViewPlacementHotkey": {
+      "name": "Переключить положение Codian",
+      "descWithKey": "Левая/правая боковая панель <-> вкладка основного редактора",
+      "descNoKey": "No hotkey set",
+      "btnChange": "Изменить",
+      "btnSet": "Задать сочетание клавиш"
+    },
     "slashCommands": {
       "name": "Команды и навыки",
       "desc": "Управление командами и навыками на уровне хранилища, расположенными в .claude/commands/ и .claude/skills/. Запускаются через /имя."

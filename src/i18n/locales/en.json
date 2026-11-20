@@ -596,6 +596,13 @@
       "btnChange": "Change",
       "btnSet": "Set hotkey"
     },
+    "toggleViewPlacementHotkey": {
+      "name": "Toggle Codian placement",
+      "descWithKey": "Left/right sidebar <-> main editor tab",
+      "descNoKey": "No hotkey set",
+      "btnChange": "Change",
+      "btnSet": "Set hotkey"
+    },
     "slashCommands": {
       "name": "Commands and Skills",
       "desc": "Manage vault-level commands and skills stored in .claude/commands/ and .claude/skills/. Triggered by /name."

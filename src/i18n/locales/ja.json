@@ -604,6 +604,13 @@
       "btnChange": "変更",
       "btnSet": "設定"
     },
+    "toggleViewPlacementHotkey": {
+      "name": "Codian の表示位置を切り替え",
+      "descWithKey": "左右サイドバー ↔ メインエディタのタブ",
+      "descNoKey": "No hotkey set",
+      "btnChange": "変更",
+      "btnSet": "ホットキーを設定"
+    },
     "slashCommands": {
       "name": "コマンドとスキル",
       "desc": ".claude/commands/ と .claude/skills/ に保存された Vault レベルのコマンドとスキルを管理します。/名前 でトリガーされます。"

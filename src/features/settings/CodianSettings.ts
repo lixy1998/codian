@@ -1231,6 +1231,7 @@ export class CodianSettingTab extends PluginSettingTab {
     addHotkeySettingRow(hotkeyGrid, this.app, 'codianz:new-session', 'settings.newSessionHotkey');
     addHotkeySettingRow(hotkeyGrid, this.app, 'codianz:new-tab', 'settings.newTabHotkey');
     addHotkeySettingRow(hotkeyGrid, this.app, 'codianz:close-current-tab', 'settings.closeTabHotkey');
+    addHotkeySettingRow(hotkeyGrid, this.app, 'codianz:toggle-view-placement', 'settings.toggleViewPlacementHotkey');
 
   }
 
