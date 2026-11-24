@@ -4,6 +4,18 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.9.1 — 2026-11-24
+
+- **The bundle is 20% smaller and behaves exactly the same.** `main.js` drops from 4.46 MB to
+  3.54 MB; nothing changes about how the plugin works, only what ships with it.
+  - Only English and Simplified Chinese interface copy is bundled now. The other eight locales
+    (de, es, fr, ja, ko, pt, ru, zh-TW) accounted for 708 KB of dead weight. Obsidian's own
+    language still drives the interface: Traditional Chinese shows the Simplified copy, and any
+    other language falls back to English.
+  - zod's locale barrel (`zod/v4/locales/index.js`) is stubbed at build time. The Claude agent SDK
+    never reads it, yet zod re-exported every locale through it. The English error maps that
+    `zod/v4/classic` imports directly are untouched, so validation messages read as before.
+
 ## 1.9.0 — 2026-11-20
 
 - **Chat placement can be changed without a trip to settings.** The panel used to be pinned where
