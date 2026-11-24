@@ -97,6 +97,28 @@ const patchSdkImportMeta = {
   },
 };
 
+// zod re-exports every locale through `zod/v4/locales/index.js`. The Claude agent
+// SDK never reads them, so stub that barrel file and keep only the English map
+// that `zod/v4/classic` imports directly for default error messages.
+const stubZodLocales = {
+  name: 'stub-zod-locales',
+  setup(build) {
+    build.onResolve(
+      { filter: /locales[\\/]index\.(?:js|cjs)$/ },
+      (args) => {
+        const importer = args.importer.replace(/\\/g, '/');
+        if (!importer.includes('/node_modules/zod/v4/')) return null;
+        return { path: args.path, namespace: 'zod-locales-stub' };
+      },
+    );
+
+    build.onLoad(
+      { filter: /.*/, namespace: 'zod-locales-stub' },
+      () => ({ contents: 'export {};', loader: 'js' }),
+    );
+  },
+};
+
 const patchRendererUnsafeUnref = {
   name: 'patch-renderer-unsafe-unref',
   setup(build) {
@@ -166,7 +188,7 @@ const context = await esbuild.context({
   alias: {
     ws: path.resolve('node_modules/ws/index.js'),
   },
-  plugins: [patchSdkImportMeta, patchRendererUnsafeUnref, copyToObsidian],
+  plugins: [stubZodLocales, patchSdkImportMeta, patchRendererUnsafeUnref, copyToObsidian],
   external: [
     'obsidian',
     'electron',
