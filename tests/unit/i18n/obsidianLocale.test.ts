@@ -4,9 +4,10 @@ describe('resolveObsidianLocale', () => {
   it.each([
     ['en', 'en'],
     ['zh', 'zh-CN'],
-    ['zh-TW', 'zh-TW'],
-    ['pt-BR', 'pt'],
-    ['ja', 'ja'],
+    ['zh-CN', 'zh-CN'],
+    ['zh-TW', 'zh-CN'],
+    ['pt-BR', 'en'],
+    ['ja', 'en'],
   ])('maps Obsidian language %s to plugin locale %s', (language, expected) => {
     expect(resolveObsidianLocale(language)).toBe(expected);
   });

@@ -3,19 +3,16 @@ import { moment } from 'obsidian';
 import { setLocale } from './i18n';
 import type { Locale } from './types';
 
+/**
+ * Codian ships English + Simplified Chinese only. Obsidian languages outside
+ * this map fall back to English; Traditional Chinese maps to the Simplified
+ * dictionary so those users still get Chinese copy rather than English.
+ */
 const OBSIDIAN_LOCALE_MAP: Readonly<Record<string, Locale>> = {
-  de: 'de',
   en: 'en',
-  es: 'es',
-  fr: 'fr',
-  ja: 'ja',
-  ko: 'ko',
-  pt: 'pt',
-  'pt-br': 'pt',
-  ru: 'ru',
   zh: 'zh-CN',
   'zh-cn': 'zh-CN',
-  'zh-tw': 'zh-TW',
+  'zh-tw': 'zh-CN',
 };
 
 export function resolveObsidianLocale(language: string): Locale {

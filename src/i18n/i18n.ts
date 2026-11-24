@@ -2,7 +2,7 @@
  * i18n - Internationalization service for Codian
  *
  * Provides translation functionality for all UI strings.
- * Supports 10 locales with English as the default fallback.
+ * English is the default and the fallback for any missing key.
  */
 
 import * as en from './locales/en.json';
@@ -10,18 +10,7 @@ import type { Locale, TranslationKey } from './types';
 
 type TranslationDictionary = typeof en;
 
-const AVAILABLE_LOCALES: readonly Locale[] = [
-  'en',
-  'zh-CN',
-  'zh-TW',
-  'ja',
-  'ko',
-  'de',
-  'fr',
-  'es',
-  'ru',
-  'pt',
-];
+const AVAILABLE_LOCALES: readonly Locale[] = ['en', 'zh-CN'];
 
 const translations: Partial<Record<Locale, TranslationDictionary>> = { en };
 
@@ -32,30 +21,6 @@ function loadTranslation(locale: Locale): TranslationDictionary | undefined {
     case 'zh-CN':
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
       return require('./locales/zh-CN.json') as TranslationDictionary;
-    case 'zh-TW':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/zh-TW.json') as TranslationDictionary;
-    case 'ja':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/ja.json') as TranslationDictionary;
-    case 'ko':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/ko.json') as TranslationDictionary;
-    case 'de':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/de.json') as TranslationDictionary;
-    case 'fr':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/fr.json') as TranslationDictionary;
-    case 'es':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/es.json') as TranslationDictionary;
-    case 'ru':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/ru.json') as TranslationDictionary;
-    case 'pt':
-      // eslint-disable-next-line @typescript-eslint/no-require-imports -- Keep bundled locale initialization lazy.
-      return require('./locales/pt.json') as TranslationDictionary;
     default:
       return undefined;
   }
@@ -160,14 +125,6 @@ export function getLocaleDisplayName(locale: Locale): string {
   const names: Record<Locale, string> = {
     'en': 'English',
     'zh-CN': '简体中文',
-    'zh-TW': '繁體中文',
-    'ja': '日本語',
-    'ko': '한국어',
-    'de': 'Deutsch',
-    'fr': 'Français',
-    'es': 'Español',
-    'ru': 'Русский',
-    'pt': 'Português',
   };
   return names[locale] || locale;
 }

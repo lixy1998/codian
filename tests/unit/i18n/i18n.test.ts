@@ -31,15 +31,12 @@ describe('i18n', () => {
       expect(result).toBe('nonexistent.key.here');
     });
 
-    it('falls back to English for missing translation in other locale', () => {
-      setLocale('de');
+    it('returns key for a missing translation in another locale', () => {
+      setLocale('zh-CN');
 
-      // Use a key that exists in English but might not in German
-      const result = t('common.save' as TranslationKey);
+      const result = t('nonexistent.key.here' as TranslationKey);
 
-      // Should return the English translation or the German one
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
+      expect(result).toBe('nonexistent.key.here');
     });
 
     it('handles nested keys correctly', () => {
@@ -81,10 +78,10 @@ describe('i18n', () => {
 
   describe('setLocale', () => {
     it('sets valid locale and returns true', () => {
-      const result = setLocale('ja');
+      const result = setLocale('en');
 
       expect(result).toBe(true);
-      expect(getLocale()).toBe('ja');
+      expect(getLocale()).toBe('en');
     });
 
     it('sets Chinese Simplified locale', () => {
@@ -94,20 +91,13 @@ describe('i18n', () => {
       expect(getLocale()).toBe('zh-CN');
     });
 
-    it('sets Chinese Traditional locale', () => {
-      const result = setLocale('zh-TW');
-
-      expect(result).toBe(true);
-      expect(getLocale()).toBe('zh-TW');
-    });
-
     it('returns false for invalid locale and keeps current', () => {
-      setLocale('de');
+      setLocale('zh-CN');
 
       const result = setLocale('invalid' as Locale);
 
       expect(result).toBe(false);
-      expect(getLocale()).toBe('de'); // Should remain unchanged
+      expect(getLocale()).toBe('zh-CN'); // Should remain unchanged
     });
   });
 
@@ -117,8 +107,8 @@ describe('i18n', () => {
     });
 
     it('returns current locale after change', () => {
-      setLocale('fr');
-      expect(getLocale()).toBe('fr');
+      setLocale('zh-CN');
+      expect(getLocale()).toBe('zh-CN');
     });
   });
 
@@ -128,19 +118,11 @@ describe('i18n', () => {
 
       expect(locales).toContain('en');
       expect(locales).toContain('zh-CN');
-      expect(locales).toContain('zh-TW');
-      expect(locales).toContain('ja');
-      expect(locales).toContain('ko');
-      expect(locales).toContain('de');
-      expect(locales).toContain('fr');
-      expect(locales).toContain('es');
-      expect(locales).toContain('ru');
-      expect(locales).toContain('pt');
     });
 
-    it('returns exactly 10 locales', () => {
+    it('returns only the bundled locales', () => {
       const locales = getAvailableLocales();
-      expect(locales).toHaveLength(10);
+      expect(locales).toHaveLength(2);
     });
   });
 
@@ -153,96 +135,14 @@ describe('i18n', () => {
       expect(getLocaleDisplayName('zh-CN')).toBe('简体中文');
     });
 
-    it('returns Traditional Chinese name for zh-TW', () => {
-      expect(getLocaleDisplayName('zh-TW')).toBe('繁體中文');
-    });
-
-    it('returns Japanese name for ja', () => {
-      expect(getLocaleDisplayName('ja')).toBe('日本語');
-    });
-
-    it('returns Korean name for ko', () => {
-      expect(getLocaleDisplayName('ko')).toBe('한국어');
-    });
-
-    it('returns German name for de', () => {
-      expect(getLocaleDisplayName('de')).toBe('Deutsch');
-    });
-
-    it('returns French name for fr', () => {
-      expect(getLocaleDisplayName('fr')).toBe('Français');
-    });
-
-    it('returns Spanish name for es', () => {
-      expect(getLocaleDisplayName('es')).toBe('Español');
-    });
-
-    it('returns Russian name for ru', () => {
-      expect(getLocaleDisplayName('ru')).toBe('Русский');
-    });
-
-    it('returns Portuguese name for pt', () => {
-      expect(getLocaleDisplayName('pt')).toBe('Português');
-    });
-
     it('returns locale code for unknown locale', () => {
       expect(getLocaleDisplayName('xx' as Locale)).toBe('xx');
     });
   });
 
   describe('translation in different locales', () => {
-    it('translates correctly in German', () => {
-      setLocale('de');
-      const result = t('common.save' as TranslationKey);
-      // German should have a translation or fall back to English
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('translates correctly in Japanese', () => {
-      setLocale('ja');
-      const result = t('common.save' as TranslationKey);
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('translates correctly in Korean', () => {
-      setLocale('ko');
-      const result = t('common.save' as TranslationKey);
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
     it('translates correctly in Simplified Chinese', () => {
       setLocale('zh-CN');
-      const result = t('common.save' as TranslationKey);
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('translates correctly in French', () => {
-      setLocale('fr');
-      const result = t('common.save' as TranslationKey);
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('translates correctly in Spanish', () => {
-      setLocale('es');
-      const result = t('common.save' as TranslationKey);
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('translates correctly in Russian', () => {
-      setLocale('ru');
-      const result = t('common.save' as TranslationKey);
-      expect(typeof result).toBe('string');
-      expect(result.length).toBeGreaterThan(0);
-    });
-
-    it('translates correctly in Portuguese', () => {
-      setLocale('pt');
       const result = t('common.save' as TranslationKey);
       expect(typeof result).toBe('string');
       expect(result.length).toBeGreaterThan(0);

@@ -1,6 +1,6 @@
 import type * as en from './locales/en.json';
 
-export type Locale = 'en' | 'zh-CN' | 'zh-TW' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'ru' | 'pt';
+export type Locale = 'en' | 'zh-CN';
 
 type DotJoin<Head extends string, Tail extends string> = `${Head}.${Tail}`;
 

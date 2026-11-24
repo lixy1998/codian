@@ -14,9 +14,9 @@ describe('title generation locale', () => {
 
   it('falls back to a valid interface locale when title locale is invalid', () => {
     expect(resolveTitleGenerationLocale({
-      locale: 'ja',
+      locale: 'zh-CN',
       titleGenerationLocale: 'not-a-locale',
-    })).toBe('ja');
-    expect(buildTitleGenerationSystemPrompt('ja')).toContain('Japanese');
+    })).toBe('zh-CN');
+    expect(buildTitleGenerationSystemPrompt('zh-CN')).toContain('Simplified Chinese');
   });
 });
