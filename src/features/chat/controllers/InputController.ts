@@ -168,6 +168,8 @@ export class InputController {
   private inputContainerHideDepth = 0;
   private steerInFlight = false;
   private pendingSteerMessage: QueuedMessage | null = null;
+  /** Set after telling the user that this provider cannot take a message mid-turn. */
+  private steerUnsupportedNotified = false;
   private activeStreamingAssistantMessage: ChatMessage | null = null;
   private pendingProviderUserMessages: PendingProviderUserMessage[] = [];
   /** Documents attached to the in-flight turn, so a rolled-back turn can restore them. */
@@ -431,6 +433,12 @@ export class InputController {
       // that refuses the steer simply keeps it waiting in the queue.
       if (this.shouldSteerOnSend(options)) {
         void this.steerQueuedMessage();
+        return;
+      }
+      // ACP providers (CodeBuddy, Kimi) have no mid-turn injection primitive. The message waits
+      // in the queue; say why instead of letting the setting look broken.
+      if (this.shouldWarnSteerUnsupported(options)) {
+        this.notifySteerUnsupported();
       }
       return;
     }
@@ -714,6 +722,7 @@ export class InputController {
         streamController.hideThinkingIndicator();
         state.isStreaming = false;
         state.cancelRequested = false;
+        this.steerUnsupportedNotified = false;
         // The turn is settled; nothing left to restore from attachments.
         this.inFlightDocuments = [];
         this.restorePendingSteerMessageToQueue();
@@ -829,6 +838,7 @@ export class InputController {
 
       if (wasInvalidated) {
         this.clearPendingSteerState();
+        this.steerUnsupportedNotified = false;
         this.updateQueueIndicator();
       }
 
@@ -1146,15 +1156,42 @@ export class InputController {
    * to finish. Pending inline interactions own the turn, so those always queue.
    */
   private shouldSteerOnSend(options?: SendMessageOptions): boolean {
+    if (!this.isSendNowDelivery(options)) return false;
+    return this.canSteerQueuedMessage()
+      && this.hasNoPendingInlineInteraction();
+  }
+
+  /**
+   * Providers without turn steering (the ACP ones: CodeBuddy, Kimi) cannot take a message
+   * mid-turn. The message stays queued; the only thing worth doing is telling the user why the
+   * "send now" setting did not apply.
+   */
+  private shouldWarnSteerUnsupported(options?: SendMessageOptions): boolean {
+    if (!this.isSendNowDelivery(options)) return false;
+    if (this.canSteerQueuedMessage()) return false;
+    if (!this.deps.state.isStreaming) return false;
+    return this.hasNoPendingInlineInteraction();
+  }
+
+  private isSendNowDelivery(options?: SendMessageOptions): boolean {
     if (options?.queueOnly === true) return false;
     // Session messages keep their own admission order; queueing preserves it.
     if (options?.origin === 'session-message') return false;
-    if ((this.deps.plugin.settings.queuedMessageSendMode ?? 'queue') !== 'steer') return false;
-    return this.canSteerQueuedMessage()
-      && this.pendingAskInline === null
+    return (this.deps.plugin.settings.queuedMessageSendMode ?? 'queue') === 'steer';
+  }
+
+  private hasNoPendingInlineInteraction(): boolean {
+    return this.pendingAskInline === null
       && this.pendingApprovalInline === null
       && this.pendingPlanApproval === null
       && this.pendingExitPlanModeInline === null;
+  }
+
+  /** Once per turn: a burst of messages should not stack identical notices. */
+  private notifySteerUnsupported(): void {
+    if (this.steerUnsupportedNotified) return;
+    this.steerUnsupportedNotified = true;
+    new Notice(t('chat.queue.steerUnsupported'));
   }
 
   private cloneQueuedMessage(message: QueuedMessage): QueuedMessage {

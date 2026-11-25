@@ -489,6 +489,52 @@ describe('InputController - Message Queue', () => {
       expect(deps.state.queuedMessage).toMatchObject({ content: 'hold this back' });
     });
 
+    it('should keep the message queued and warn when the provider cannot steer', async () => {
+      const mockAgentService = (deps as any).mockAgentService;
+      (deps.plugin as any).settings.queuedMessageSendMode = 'steer';
+      deps.state.isStreaming = true;
+      inputEl.value = 'send this now';
+
+      await controller.sendMessage();
+
+      expect(mockAgentService.steer).not.toHaveBeenCalled();
+      expect(mockAgentService.cancel).not.toHaveBeenCalled();
+      expect(deps.state.cancelRequested).toBe(false);
+      expect(deps.state.queuedMessage).toMatchObject({ content: 'send this now' });
+      expect(mockNotice).toHaveBeenCalledWith(t('chat.queue.steerUnsupported'));
+    });
+
+    it('should warn only once per running turn when steering is unsupported', async () => {
+      (deps.plugin as any).settings.queuedMessageSendMode = 'steer';
+      deps.state.isStreaming = true;
+      mockNotice.mockClear();
+
+      inputEl.value = 'first';
+      await controller.sendMessage();
+      inputEl.value = 'second';
+      await controller.sendMessage();
+
+      const warnings = mockNotice.mock.calls
+        .filter(([message]) => message === t('chat.queue.steerUnsupported'));
+      expect(warnings).toHaveLength(1);
+      expect(deps.state.queuedMessage?.content).toBe('first\n\nsecond');
+    });
+
+    it('should not warn when the delivery setting is queue', async () => {
+      const mockAgentService = (deps as any).mockAgentService;
+      (deps.plugin as any).settings.queuedMessageSendMode = 'queue';
+      deps.state.isStreaming = true;
+      mockNotice.mockClear();
+
+      inputEl.value = 'wait your turn';
+      await controller.sendMessage();
+
+      expect(mockAgentService.cancel).not.toHaveBeenCalled();
+      expect(deps.state.cancelRequested).toBe(false);
+      expect(deps.state.queuedMessage).toMatchObject({ content: 'wait your turn' });
+      expect(mockNotice).not.toHaveBeenCalledWith(t('chat.queue.steerUnsupported'));
+    });
+
     it('should queue message with images when streaming', async () => {
       deps.state.isStreaming = true;
       inputEl.value = 'queued with images';
@@ -712,6 +758,18 @@ describe('InputController - Message Queue', () => {
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
       expect(queueIndicatorEl.querySelector('.codian-queue-indicator-action')?.textContent).toBe(t('chat.queue.steerNow'));
+    });
+
+    it('should not offer a send-now action when steering is unsupported', () => {
+      (deps.plugin as any).settings.queuedMessageSendMode = 'steer';
+      deps.state.isStreaming = true;
+      deps.state.queuedMessage = { content: 'queued content', images: undefined, editorContext: null, canvasContext: null };
+
+      controller.updateQueueIndicator();
+
+      const queueIndicatorEl = deps.state.queueIndicatorEl as any;
+      expect(queueIndicatorEl.querySelector('.codian-queue-indicator-action')).toBeNull();
+      expect(queueIndicatorEl.querySelector('.codian-queue-indicator-icon-action')).not.toBeNull();
     });
 
     it('should steer the queued Codex message when the action is clicked', async () => {

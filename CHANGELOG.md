@@ -4,6 +4,17 @@
 > [lixy1998/codian](https://github.com/lixy1998/codian); upstream is
 > [BCS1037/codian](https://github.com/BCS1037/codian).
 
+## 1.9.2 — 2026-11-25
+
+- **"Send now" no longer looks broken on providers that cannot be steered.** The delivery setting
+  only applied when the active provider advertised `supportsTurnSteer` and exposed `steer()`.
+  CodeBuddy and Kimi run over ACP, which has no mid-turn injection primitive, so a message sent
+  while a turn was running was queued with no explanation — the setting appeared to do nothing.
+  - Those providers now say so: one notice per running turn reports that the message is queued and
+    names what "send now" needs. The running turn is left alone.
+  - The queue row keeps only edit and discard, since there is no steer to offer.
+  - The setting description names the providers this applies to.
+
 ## 1.9.1 — 2026-11-24
 
 - **The bundle is 20% smaller and behaves exactly the same.** `main.js` drops from 4.46 MB to

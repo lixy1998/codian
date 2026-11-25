@@ -205,6 +205,7 @@
       "queued": "Queued",
       "steering": "Steering",
       "steerNow": "Send now",
+      "steerUnsupported": "This provider cannot take a message mid-turn, so it stays queued. Use a provider that supports steering, or wait for this turn to finish.",
       "edit": "Edit queued message",
       "discard": "Discard queued message",
       "steerFailed": "Could not send the message into the running turn. It stays queued."
@@ -556,7 +557,7 @@
     },
     "queuedMessageSendMode": {
       "name": "Queued message delivery",
-      "desc": "How a message sent while the agent is running is delivered. Queue waits for the current turn to finish; Send now injects it into the running turn. Hold Alt while sending to queue one message anyway.",
+      "desc": "How a message sent while the agent is running is delivered. Queue waits for the current turn to finish; Send now injects it into the running turn. Providers without mid-turn steering (CodeBuddy, Kimi) keep the message queued and say so. Hold Alt while sending to queue one message anyway.",
       "queue": "Queue",
       "steer": "Send now"
     },
