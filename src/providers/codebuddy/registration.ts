@@ -19,6 +19,13 @@ import { codebuddyChatUIConfig } from './ui/CodebuddyChatUIConfig';
  */
 const nativeCodebuddyProviderRegistration = createNativeAcpProviderModule({
   args: ['--acp'],
+  buildExtraArgs: plugin => {
+    // ACP has no field for a system prompt, and CodeBuddy's own `CODEBUDDY.md` already covers the
+    // repo-level rules. Append the user's custom prompt on the command line so the plugin's
+    // "custom system prompt" setting reaches this provider instead of being silently dropped.
+    const customPrompt = plugin.settings.systemPrompt?.trim();
+    return customPrompt ? ['--append-system-prompt', customPrompt] : [];
+  },
   capabilities: CODEBUDDY_PROVIDER_CAPABILITIES,
   chatUIConfig: codebuddyChatUIConfig,
   createSessionAdapter: plugin => new CodebuddySessionAdapter(plugin),

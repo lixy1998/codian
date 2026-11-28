@@ -1,5 +1,6 @@
 import type { Readable, Writable } from 'node:stream';
 
+import type { ProviderHost } from '../../../core/providers/ProviderHost';
 import type { ProviderCapabilities, ProviderId } from '../../../core/providers/types';
 import type {
   AcpClientConnection,
@@ -21,6 +22,12 @@ export interface NativeAcpSubprocess {
 export interface NativeAcpRuntimeOptions {
   args: string[];
   capabilities: ProviderCapabilities;
+  /**
+   * Extra CLI arguments resolved at process start, so values derived from live settings stay
+   * current after a forced restart. Providers whose CLI has no other channel for a system
+   * prompt supply this (CodeBuddy accepts `--append-system-prompt` on the command line).
+   */
+  buildExtraArgs?: (plugin: ProviderHost) => string[];
   createSubprocess?: (spec: AcpSubprocessLaunchSpec) => NativeAcpSubprocess;
   defaultCommand: string;
   /**

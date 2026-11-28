@@ -129,6 +129,14 @@ export class NativeAcpChatRuntime implements ChatRuntime {
   }
 
   async ensureReady(options: ChatRuntimeEnsureReadyOptions = {}): Promise<boolean> {
+    if (options.force && !this.disposed) {
+      // The CLI reads launch-time switches (such as `--append-system-prompt`) only when the
+      // process starts, so a settings change needs a fresh child process. Clearing the id makes
+      // the reattach below either load `targetSessionId` or start a new session in that process;
+      // keeping the old id would point at a session the new process has never seen.
+      await this.shutdownProcess();
+      this.sessionId = null;
+    }
     if (this.disposed) {
       return false;
     }
@@ -383,7 +391,7 @@ export class NativeAcpChatRuntime implements ChatRuntime {
       ),
     };
     const spec = {
-      args: [...this.options.args],
+      args: [...this.options.args, ...(this.options.buildExtraArgs?.(this.plugin) ?? [])],
       command: resolvedCommand,
       cwd,
       env: this.options.prepareEnvironment
